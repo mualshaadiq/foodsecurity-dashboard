@@ -1,0 +1,15 @@
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+asyncpg==0.29.0
+sqlalchemy==2.0.25
+geoalchemy2==0.14.3
+python-jose[cryptography]==3.3.0
+passlib[argon2]==1.7.4
+python-multipart==0.0.6
+pydantic[email]==2.5.3
+pydantic-settings==2.1.0
+fiona==1.9.5
+pyogrio==0.7.2
+shapely==2.0.2
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0

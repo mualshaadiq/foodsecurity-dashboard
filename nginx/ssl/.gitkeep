@@ -1,0 +1,13 @@
+# Placeholder for SSL certificates
+# 
+# For local development:
+#   Run scripts/generate_ssl.sh to create self-signed certificates
+#
+# For production:
+#   Use Let's Encrypt with certbot:
+#   - certbot certonly --standalone -d yourdomain.com
+#   - Certificates will be in /etc/letsencrypt/live/yourdomain.com/
+#
+# Files needed:
+#   - nginx.crt (or fullchain.pem for Let's Encrypt)
+#   - nginx.key (or privkey.pem for Let's Encrypt)

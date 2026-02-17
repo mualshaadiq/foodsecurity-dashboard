@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS Web Application</title>
+    
+    <!-- MapLibre GL JS -->
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <h1>🗺️ GIS Web Application</h1>
+        </div>
+        <div class="nav-menu">
+            <div id="user-info" class="user-info" style="display: none;">
+                <span id="username-display"></span>
+                <button id="logout-btn" class="btn btn-secondary">Logout</button>
+            </div>
+            <div id="auth-buttons" class="auth-buttons">
+                <button id="login-btn" class="btn btn-primary">Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h3>Filters</h3>
+                <div class="filter-group">
+                    <label for="category-filter">Category</label>
+                    <select id="category-filter" class="form-control">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Geometry Type</label>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" id="show-points" checked> Points
+                        </label>
+                        <label>
+                            <input type="checkbox" id="show-lines" checked> Lines
+                        </label>
+                        <label>
+                            <input type="checkbox" id="show-polygons" checked> Polygons
+                        </label>
+                    </div>
+                </div>
+                <button id="apply-filters-btn" class="btn btn-primary btn-block">Apply Filters</button>
+                <button id="reset-filters-btn" class="btn btn-secondary btn-block">Reset</button>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Search</h3>
+                <input type="text" id="search-input" class="form-control" placeholder="Search features...">
+                <div id="search-results" class="search-results"></div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Export</h3>
+                <button id="export-geojson-btn" class="btn btn-success btn-block">Export GeoJSON</button>
+                <button id="export-shapefile-btn" class="btn btn-success btn-block">Export Shapefile</button>
+                <button id="export-csv-btn" class="btn btn-success btn-block">Export CSV</button>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Statistics</h3>
+                <div id="stats-display">
+                    <p>Login to view statistics</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Map Container -->
+        <main class="map-container">
+            <div id="map"></div>
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" required>
+                </div>
+                <div id="login-error" class="error-message"></div>
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Feature Info Popup (for click events) -->
+    <div id="feature-popup" class="popup" style="display: none;">
+        <div class="popup-content">
+            <span class="popup-close">&times;</span>
+            <div id="feature-info"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

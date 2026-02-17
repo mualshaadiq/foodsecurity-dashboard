@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  postgis:
+    image: postgis/postgis:15-3.3
+    container_name: gis_postgis
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./scripts/create_users.sql:/docker-entrypoint-initdb.d/02-create-users.sql
+      - ./data:/data:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - gis-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  fastapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gis_fastapi
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    volumes:
+      - ./backend:/app
+      - ./data:/data:ro
+    expose:
+      - "8000"
+    networks:
+      - gis-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+  tegola:
+    image: gospatial/tegola:v0.18.0
+    container_name: gis_tegola
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=postgis
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./tegola/config.toml:/config/config.toml:ro
+      - tegola-cache:/tmp/tegola-cache
+    expose:
+      - "8080"
+    networks:
+      - gis-network
+    command: serve --config /config/config.toml
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: gis_nginx
+    depends_on:
+      - fastapi
+      - tegola
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - gis-network
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
+  tegola-cache:
+    driver: local
+
+networks:
+  gis-network:
+    driver: bridge

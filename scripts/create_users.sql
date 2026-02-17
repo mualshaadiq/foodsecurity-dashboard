@@ -1,0 +1,8 @@
+-- This file is intentionally empty
+-- Users are created by the FastAPI application on startup
+-- See backend/app/db/connection.py init_admin_user() function
+-- 
+-- The admin user is created automatically using credentials from .env:
+--   - ADMIN_EMAIL
+--   - ADMIN_USERNAME
+--   - ADMIN_PASSWORD
