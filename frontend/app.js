@@ -1,6 +1,8 @@
 // Main Application Logic
+import maplibregl from 'maplibre-gl';
 
 let map;
+let currentBasemap = 'esri-dark';
 let currentFilters = {
     category: null,
     showPoints: true,
@@ -8,10 +10,51 @@ let currentFilters = {
     showPolygons: true
 };
 
+// Available basemaps
+const basemaps = {
+    'esri-dark': {
+        name: 'Esri Dark',
+        type: 'raster',
+        tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
+        attribution: '© Esri'
+    },
+    'esri-streets': {
+        name: 'Esri Streets',
+        type: 'raster',
+        tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'],
+        attribution: '© Esri'
+    },
+    'esri-satellite': {
+        name: 'Esri Satellite',
+        type: 'raster',
+        tiles: ['https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        attribution: '© Esri'
+    },
+    'osm': {
+        name: 'OpenStreetMap',
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        attribution: '© OpenStreetMap contributors'
+    },
+    'carto-light': {
+        name: 'Carto Light',
+        type: 'raster',
+        tiles: ['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],
+        attribution: '© CartoDB'
+    },
+    'carto-dark': {
+        name: 'Carto Dark',
+        type: 'raster',
+        tiles: ['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],
+        attribution: '© CartoDB'
+    }
+};
+
 // Initialize the application
 function initApp() {
     initMap();
     initEventListeners();
+    initBasemapSelector();
     loadCategories();
     
     // Listen for auth changes
@@ -25,16 +68,18 @@ function initApp() {
 
 // Initialize MapLibre map
 function initMap() {
+    const basemapConfig = basemaps[currentBasemap];
+    
     map = new maplibregl.Map({
         container: 'map',
         style: {
             version: 8,
             sources: {
-                'osm': {
-                    type: 'raster',
-                    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                'basemap': {
+                    type: basemapConfig.type,
+                    tiles: basemapConfig.tiles,
                     tileSize: 256,
-                    attribution: '© OpenStreetMap contributors'
+                    attribution: basemapConfig.attribution
                 },
                 'gis-tiles': {
                     type: 'vector',
@@ -45,14 +90,14 @@ function initMap() {
             },
             layers: [
                 {
-                    id: 'osm',
+                    id: 'basemap',
                     type: 'raster',
-                    source: 'osm'
+                    source: 'basemap'
                 }
             ]
         },
-        center: [0, 0],
-        zoom: 2
+        center: [118.0, -2.5], // Indonesia
+        zoom: 5
     });
 
     // Add navigation controls
@@ -191,6 +236,67 @@ function showFeaturePopup(feature, lngLat) {
         .setLngLat(lngLat)
         .setHTML(htmlContent)
         .addTo(map);
+}
+
+// Initialize basemap selector
+function initBasemapSelector() {
+    const toggle = document.getElementById('basemap-toggle');
+    const options = document.getElementById('basemap-options');
+    const basemapOptions = document.querySelectorAll('.basemap-option');
+    
+    // Toggle basemap options visibility
+    toggle.addEventListener('click', () => {
+        options.classList.toggle('show');
+        toggle.textContent = options.classList.contains('show') ? '▲' : '▼';
+    });
+    
+    // Handle basemap selection
+    basemapOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            const selectedBasemap = option.getAttribute('data-basemap');
+            if (selectedBasemap !== currentBasemap) {
+                switchBasemap(selectedBasemap);
+                
+                // Update active state
+                basemapOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+                
+                // Close dropdown
+                options.classList.remove('show');
+                toggle.textContent = '▼';
+            }
+        });
+    });
+}
+
+// Switch basemap
+function switchBasemap(basemapId) {
+    const basemapConfig = basemaps[basemapId];
+    if (!basemapConfig || !map) return;
+    
+    currentBasemap = basemapId;
+    
+    // Update basemap source
+    if (map.getSource('basemap')) {
+        map.removeLayer('basemap');
+        map.removeSource('basemap');
+    }
+    
+    // Add new basemap
+    map.addSource('basemap', {
+        type: basemapConfig.type,
+        tiles: basemapConfig.tiles,
+        tileSize: 256,
+        attribution: basemapConfig.attribution
+    });
+    
+    // Add basemap layer (before vector layers)
+    const firstVectorLayer = map.getLayer('polygons') ? 'polygons' : undefined;
+    map.addLayer({
+        id: 'basemap',
+        type: 'raster',
+        source: 'basemap'
+    }, firstVectorLayer);
 }
 
 // Initialize event listeners

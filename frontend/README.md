@@ -87,6 +87,17 @@ frontend/
 
 ## Development Features
 
+### Basemap Selection
+Choose from multiple basemap styles via the interactive selector card:
+- **Esri Dark** (default) - Dark gray canvas optimized for data visualization
+- **Esri Streets** - Detailed street map with labels
+- **Esri Satellite** - High-resolution satellite imagery
+- **OpenStreetMap** - Community-contributed street map
+- **Carto Light** - Clean, light-colored minimalist design
+- **Carto Dark** - Dark theme for low-light viewing
+
+The basemap selector is located in the top-right corner of the map. Click to expand options and select your preferred basemap.
+
 ### Hot Module Replacement (HMR)
 Changes to JS/CSS files automatically refresh in browser without full page reload.
 

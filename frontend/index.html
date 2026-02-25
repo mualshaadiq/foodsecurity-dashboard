@@ -79,6 +79,47 @@
         <!-- Map Container -->
         <main class="map-container">
             <div id="map"></div>
+            
+            <!-- Basemap Selector -->
+            <div class="basemap-selector">
+                <div class="basemap-header">
+                    <h4>🗺️ Basemap</h4>
+                    <button class="basemap-toggle" id="basemap-toggle">▼</button>
+                </div>
+                <div class="basemap-options" id="basemap-options">
+                    <div class="basemap-option active" data-basemap="esri-dark">
+                        <div class="basemap-preview" style="background: linear-gradient(135deg, #2c3e50, #34495e);">
+                            <span class="basemap-label">Esri Dark</span>
+                        </div>
+                    </div>
+                    <div class="basemap-option" data-basemap="esri-streets">
+                        <div class="basemap-preview" style="background: linear-gradient(135deg, #ecf0f1, #bdc3c7);">
+                            <span class="basemap-label">Esri Streets</span>
+                        </div>
+                    </div>
+                    <div class="basemap-option" data-basemap="esri-satellite">
+                        <div class="basemap-preview" style="background: linear-gradient(135deg, #1e3a5f, #2c5f2d);">
+                            <span class="basemap-label">Esri Satellite</span>
+                        </div>
+                    </div>
+                    <div class="basemap-option" data-basemap="osm">
+                        <div class="basemap-preview" style="background: linear-gradient(135deg, #f0ede4, #c6b8a6);">
+                            <span class="basemap-label">OpenStreetMap</span>
+                        </div>
+                    </div>
+                    <div class="basemap-option" data-basemap="carto-light">
+                        <div class="basemap-preview" style="background: linear-gradient(135deg, #ffffff, #f5f5f5);">
+                            <span class="basemap-label">Carto Light</span>
+                        </div>
+                    </div>
+                    <div class="basemap-option" data-basemap="carto-dark">
+                        <div class="basemap-preview" style="background: linear-gradient(135deg, #2c3e50, #1a252f);">
+                            <span class="basemap-label">Carto Dark</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div id="loading" class="loading" style="display: none;">
                 <div class="spinner"></div>
             </div>
