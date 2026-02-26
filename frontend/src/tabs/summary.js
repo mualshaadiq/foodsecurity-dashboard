@@ -1,6 +1,6 @@
 import Chart from 'chart.js/auto';
 import { getAssetStats, getCropStats, getMonthlyReport } from '@/api/food-security.js';
-import { sfSummaryProvince } from '@/components/select-fields.js';
+import { sfSummaryAoi } from '@/components/select-fields.js';
 
 let farmAreaChart = null;
 let paddyAreaChart = null;
@@ -17,20 +17,20 @@ export async function initSummaryTab() {
         loadMonthlyReport(),
     ]);
 
-    sfSummaryProvince.setOnChange(async (vals) => {
-        const province = vals[0] || null;
+    sfSummaryAoi.setOnChange(async (vals) => {
+        const aoiId = vals[0] || null;
         await Promise.all([
-            loadAssetCharts(province),
-            loadMonthlyReport(null, null, province),
+            loadAssetCharts(aoiId),
+            loadMonthlyReport(null, null, aoiId),
         ]);
     });
 }
 
-async function loadAssetCharts(province = null) {
+async function loadAssetCharts(aoiId = null) {
     try {
         const data = await getAssetStats();
-        const items = province
-            ? data.filter((d) => d.province_code === province)
+        const items = aoiId
+            ? data.filter((d) => String(d.aoi_id) === aoiId)
             : data;
 
         const labels  = items.map((d) => d.province_name ?? d.province_code);

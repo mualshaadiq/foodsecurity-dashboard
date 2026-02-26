@@ -46,8 +46,8 @@ services:
     volumes:
       - ./backend:/app
       - ./data:/data:ro
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     networks:
       - gis-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -68,8 +68,8 @@ services:
     volumes:
       - ./tegola/config.toml:/config/config.toml:ro
       - tegola-cache:/tmp/tegola-cache
-    expose:
-      - "8080"
+    ports:
+      - "8080:8080"
     networks:
       - gis-network
     command: serve --config /config/config.toml

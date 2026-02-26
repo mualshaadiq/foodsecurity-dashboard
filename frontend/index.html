@@ -33,7 +33,7 @@
         <button class="tab-btn" data-tab="disaster-risk">Disaster Risk</button>
         <button class="tab-btn" data-tab="yield-prediction">Yield Prediction</button>
         <button class="tab-btn" data-tab="summary">Summary</button>
-        <button class="tab-btn" data-tab="basemap">Base Map</button>
+        <button class="tab-btn" data-tab="imagery">Imagery</button>
     </nav>
 
     <!-- ── Main Container ─────────────────────────────────────────────── -->
@@ -57,6 +57,7 @@
                 <div class="sidebar-section">
                     <h3>AOI</h3>
                     <button id="draw-aoi-btn" class="btn btn-primary btn-block">✏️ Draw AOI</button>
+                    <div id="aoi-list"></div>
                 </div>
                 <div class="sidebar-section">
                     <h3>Legend</h3>
@@ -87,11 +88,6 @@
                     <h3>NDVI</h3>
                     <div class="checkbox-group">
                         <label class="sw"><input type="checkbox" id="toggle-ndvi" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">NDVI Zones</span></label>
-                    </div>
-                    <div class="form-group" style="margin-top:12px;">
-                        <label for="ndvi-date-slider">Observation Date</label>
-                        <input type="date" id="ndvi-date-slider" class="form-control">
-                        <span id="ndvi-date-label" style="font-size:12px;color:#64748b;"></span>
                     </div>
                     <div id="legend-ndvi" class="legend" style="margin-top:10px;"></div>
                 </div>
@@ -176,38 +172,75 @@
                 </div>
             </div>
 
-            <!-- ── Tab 7: Base Map ─────────────────────────────────────── -->
-            <div class="tab-panel" id="panel-basemap">
+            <!-- ── Tab 7: Imagery ────────────────────────────────────── -->
+            <div class="tab-panel" id="panel-imagery">
                 <div class="sidebar-section">
-                    <h3>Layer Filters</h3>
-                    <div id="category-filter-mount"></div>
+                    <h3>Sentinel-2</h3>
+                    <div class="checkbox-group">
+                        <label class="sw">
+                            <input type="checkbox" id="toggle-sentinel" class="sw-input" checked>
+                            <span class="sw-track"><span class="sw-knob"></span></span>
+                            <span class="sw-text">Show Sentinel-2 Layer</span>
+                        </label>
+                    </div>
+                    <div class="filter-group" style="margin-top:12px;">
+                        <label class="form-label">Cloudless Year</label>
+                        <select id="sentinel-year-select" class="form-control">
+                            <option value="2020">2020</option>
+                            <option value="2021">2021</option>
+                            <option value="2022">2022</option>
+                            <option value="2023" selected>2023</option>
+                        </select>
+                    </div>
                     <div class="filter-group">
-                        <label>Geometry Type</label>
-                        <div class="checkbox-group">
-                            <label class="sw"><input type="checkbox" id="show-points" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Points</span></label>
-                            <label class="sw"><input type="checkbox" id="show-lines" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Lines</span></label>
-                            <label class="sw"><input type="checkbox" id="show-polygons" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Polygons</span></label>
+                        <label class="form-label">Opacity</label>
+                        <input type="range" id="sentinel-opacity" min="0" max="100" value="100" class="imagery-opacity-slider">
+                    </div>
+                    <p class="imagery-attribution">
+                        Source: <a href="https://s2maps.eu" target="_blank">Sentinel-2 cloudless</a> by
+                        <a href="https://eox.at" target="_blank">EOX IT Services GmbH</a>.<br>
+                        Contains modified Copernicus Sentinel data.
+                    </p>
+                </div>
+
+                <!-- ── Scene Search (NASA CMR) ──────────────────────── -->
+                <div class="sidebar-section">
+                    <h3>Scene Search</h3>
+                    <p class="imagery-hint">Find the best Sentinel-2 acquisition for an AOI by cloud cover.</p>
+                    <div class="filter-group">
+                        <label class="form-label">AOI</label>
+                        <select id="imagery-aoi-select" class="form-control">
+                            <option value="">— select AOI —</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="form-label">Date Range</label>
+                        <div class="imagery-date-row">
+                            <input type="date" id="imagery-date-start" class="form-control">
+                            <span class="imagery-date-sep">–</span>
+                            <input type="date" id="imagery-date-end" class="form-control">
                         </div>
                     </div>
-                    <button id="apply-filters-btn" class="btn btn-primary btn-block">Apply Filters</button>
-                    <button id="reset-filters-btn" class="btn btn-secondary btn-block">Reset</button>
-                </div>
-                <div class="sidebar-section">
-                    <h3>Search Features</h3>
-                    <div class="search-wrap">
-                        <input type="text" id="search-input" class="form-control" placeholder="Search features…">
+                    <div class="filter-group">
+                        <label class="form-label">Max Cloud Cover &nbsp;<span id="cloud-cover-display" class="imagery-value-badge">20%</span></label>
+                        <input type="range" id="imagery-cloud-cover" min="0" max="100" value="20" class="imagery-opacity-slider">
                     </div>
-                    <div id="search-results" class="search-results"></div>
+                    <button id="imagery-search-btn" class="btn btn-primary btn-block">Find Best Scene</button>
+                    <div id="imagery-results" class="imagery-results"></div>
                 </div>
+
                 <div class="sidebar-section">
-                    <h3>Export Data</h3>
-                    <button id="export-geojson-btn"   class="btn btn-success btn-block">Export GeoJSON</button>
-                    <button id="export-shapefile-btn" class="btn btn-success btn-block">Export Shapefile</button>
-                    <button id="export-csv-btn"       class="btn btn-success btn-block">Export CSV</button>
+                    <h3>Archived Scenes</h3>
+                    <p class="imagery-hint">Scenes saved to archive for the selected AOI. Shown as blue outlines on the map.</p>
+                    <div id="archived-scenes-list" class="imagery-results">
+                        <p class="imagery-msg">Select an AOI to view its archived scenes.</p>
+                    </div>
                 </div>
+
                 <div class="sidebar-section">
-                    <h3>Statistics</h3>
-                    <div id="stats-display"><p>Login to view statistics</p></div>
+                    <h3>Planet</h3>
+                    <p class="imagery-coming-soon">Planet high-resolution daily imagery will be available here once a Planet API key is configured.</p>
+                    <button class="btn btn-secondary btn-block" disabled style="opacity:.45;cursor:not-allowed;">Connect Planet API</button>
                 </div>
             </div>
 
@@ -217,10 +250,78 @@
         <main class="map-container">
             <div id="map"></div>
 
+            <!-- Draw hint bar -->
+            <div id="draw-hint">🖊 Click to place vertices &nbsp;·&nbsp; Double-click to finish &nbsp;·&nbsp; ESC to cancel</div>
+
+            <!-- Global time slider -->
+            <div id="time-slider-bar">
+                <button id="time-prev" class="ts-btn" title="Previous">&#9664;</button>
+                <button id="time-play" class="ts-btn" title="Play">&#9654;</button>
+                <input type="range" id="time-range" min="0" max="0" value="0">
+                <span id="time-date-label"></span>
+                <button id="time-next" class="ts-btn" title="Next">&#9654;&#9654;</button>
+            </div>
+
             <div id="loading" class="loading" style="display:none;">
                 <div class="spinner"></div>
             </div>
         </main>
+    </div>
+
+    <!-- ── AOI Creation Modal ──────────────────────────────────────────── -->
+    <div id="aoi-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="aoi-modal-close close">&times;</span>
+            <h2>Create Area of Interest</h2>
+
+            <div class="form-group">
+                <label for="aoi-name">Name <span class="req">*</span></label>
+                <input type="text" id="aoi-name" class="form-control" placeholder="e.g. Sawah Jawa Barat Utara">
+            </div>
+
+            <div class="form-group">
+                <label for="aoi-desc">Description</label>
+                <textarea id="aoi-desc" class="form-control" rows="2" placeholder="Optional notes about this area"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Monitoring Interval <span class="req">*</span></label>
+                <div style="display:flex;gap:8px;">
+                    <input type="number" id="aoi-interval" class="form-control" value="7" min="1" max="365" style="width:90px;flex-shrink:0;">
+                    <select id="aoi-interval-unit" class="form-control">
+                        <option value="days">Days</option>
+                        <option value="weeks">Weeks</option>
+                        <option value="months">Months</option>
+                    </select>
+                </div>
+                <span class="form-desc">How often this area will be analysed.</span>
+            </div>
+
+            <div class="form-group">
+                <label>Layers to Monitor</label>
+                <div class="aoi-layers-grid" id="aoi-layers-group">
+                    <label class="sw"><input type="checkbox" class="sw-input" value="ndvi"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">NDVI</span></label>
+                    <label class="sw"><input type="checkbox" class="sw-input" value="fertilizer"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Fertilizer</span></label>
+                    <label class="sw"><input type="checkbox" class="sw-input" value="farm-boundary"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Farm Boundary</span></label>
+                    <label class="sw"><input type="checkbox" class="sw-input" value="crop-classification"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Crop Class.</span></label>
+                    <label class="sw"><input type="checkbox" class="sw-input" value="flood-risk"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Flood Risk</span></label>
+                    <label class="sw"><input type="checkbox" class="sw-input" value="drought"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Drought</span></label>
+                    <label class="sw"><input type="checkbox" class="sw-input" value="yield-prediction"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Yield Predict.</span></label>
+                </div>
+            </div>
+
+            <div class="aoi-draw-row">
+                <button id="aoi-draw-btn" class="btn btn-secondary">✏️ Draw Area</button>
+                <span id="aoi-draw-status"><span class="draw-status-empty">No boundary &mdash; click &ldquo;Draw Area&rdquo;</span></span>
+            </div>
+
+            <p id="aoi-error" class="form-error"></p>
+
+            <div class="aoi-modal-footer">
+                <button id="aoi-cancel-btn" class="btn btn-ghost">Cancel</button>
+                <button id="aoi-save-btn" class="btn btn-primary" disabled>Save AoI</button>
+            </div>
+        </div>
     </div>
 
     <!-- ── Login Modal ────────────────────────────────────────────────── -->

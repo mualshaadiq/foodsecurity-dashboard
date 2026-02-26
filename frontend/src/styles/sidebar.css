@@ -191,6 +191,257 @@
 /* sections are now cards — no extra border needed */
 .sidebar-section + .sidebar-section {}
 
+/* ─── Imagery tab ────────────────────────────────────────────────────────── */
+.imagery-opacity-slider {
+    width: 100%;
+    accent-color: var(--accent);
+    margin-top: 4px;
+}
+
+.imagery-attribution {
+    font-size: var(--type-note);
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 10px;
+}
+
+.imagery-attribution a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.imagery-attribution a:hover {
+    text-decoration: underline;
+}
+
+.imagery-coming-soon {
+    font-size: var(--type-note);
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+/* ── Scene Search ───────────────────────────────────────── */
+.imagery-hint {
+    font-size: var(--type-note);
+    color: var(--text-muted);
+    margin: 0 0 10px;
+    line-height: 1.5;
+}
+
+.imagery-value-badge {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    padding: 1px 6px;
+    border-radius: 10px;
+    vertical-align: middle;
+}
+
+.imagery-date-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.imagery-date-row .form-control {
+    flex: 1;
+    min-width: 0;
+    font-size: .72rem;
+    padding: 5px 7px;
+}
+.imagery-date-sep {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.imagery-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.imagery-msg {
+    font-size: var(--type-note);
+    color: var(--text-muted);
+    padding: 6px 0;
+    text-align: center;
+}
+.imagery-msg--warn  { color: #b45309; }
+.imagery-msg--error { color: var(--red, #dc2626); }
+
+/* CMR result card */
+.cmr-card {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    background: var(--panel-bg);
+    transition: border-color .15s, background .15s;
+}
+.cmr-card:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 5%, var(--panel-bg));
+}
+.cmr-card--active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--panel-bg));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.cmr-thumb {
+    width: 64px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 5px;
+    flex-shrink: 0;
+    background: var(--border);
+}
+.cmr-thumb--placeholder {
+    width: 64px;
+    height: 48px;
+    border-radius: 5px;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--text-muted) 15%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+.cmr-card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.cmr-card-date {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cmr-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+.cmr-best-badge {
+    font-size: .67rem;
+    font-weight: 700;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    padding: 1px 5px;
+    border-radius: 9px;
+}
+.cmr-cloud-badge {
+    font-size: .67rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+    padding: 1px 5px;
+    border-radius: 9px;
+}
+.cmr-short-name {
+    font-size: .65rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Archive button inside a CMR result card */
+.cmr-archive-btn {
+    flex-shrink: 0;
+    align-self: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--accent);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, border-color .15s;
+    padding: 0;
+}
+.cmr-archive-btn:hover {
+    background: color-mix(in srgb, var(--accent) 15%, var(--bg-surface));
+    border-color: var(--accent);
+}
+.cmr-archive-btn--done {
+    color: var(--success);
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 10%, var(--bg-surface));
+    pointer-events: none;
+}
+.cmr-archive-btn:disabled { opacity: .5; cursor: wait; }
+
+/* Archived scene list card */
+.archived-scene-card {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    align-items: center;
+}
+.archived-scene-range {
+    font-size: .65rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.archived-scene-actions {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-left: auto;
+}
+.archived-scene-zoom,
+.archived-scene-del {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    font-size: .8rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background .15s, border-color .15s;
+}
+.archived-scene-zoom { color: var(--accent); }
+.archived-scene-zoom:hover {
+    background: color-mix(in srgb, var(--accent) 15%, var(--bg-surface));
+    border-color: var(--accent);
+}
+.archived-scene-del { color: var(--red, #dc2626); }
+.archived-scene-del:hover {
+    background: color-mix(in srgb, #dc2626 12%, var(--bg-surface));
+    border-color: #dc2626;
+}
+
 @media (max-width: 768px) {
     .sidebar {
         position: absolute;

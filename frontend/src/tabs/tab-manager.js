@@ -11,11 +11,14 @@ const TAB_LAYERS = {
     'disaster-risk':    ['flood-risk', 'drought-zones'],
     'yield-prediction': ['yield-zones', 'yield-zones-outline'],
     'summary':          [],
-    'basemap':          [], // base layers are always visible; no FS layers toggled
+    'imagery':          [], // imagery layers handled separately by imagery.js
 };
 
 /** All food-security layer IDs (hidden by default) */
 const ALL_FS_LAYERS = Object.values(TAB_LAYERS).flat();
+
+/** Tabs that show temporal data and should display the time slider */
+const TEMPORAL_TABS = new Set(['ai', 'crop-health', 'disaster-risk', 'yield-prediction']);
 
 export class TabManager {
     /**
@@ -58,6 +61,11 @@ export class TabManager {
 
         // Toggle map layer visibility
         this._applyLayerVisibility(tabId);
+
+        // Notify time slider and other listeners whether this is a temporal tab
+        window.dispatchEvent(new CustomEvent('temporal-tab-changed', {
+            detail: { tabId, isTemporal: TEMPORAL_TABS.has(tabId) },
+        }));
 
         // Update URL hash for bookmarking
         window.location.hash = tabId;

@@ -10,6 +10,7 @@
     "lint": "eslint src --ext js --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.1",
     "chart.js": "^4.4.0",
     "maplibre-gl": "^3.6.2"
   },

@@ -63,9 +63,17 @@ CREATE INDEX IF NOT EXISTS idx_spatial_features_lines ON spatial_features USING 
 CREATE INDEX IF NOT EXISTS idx_spatial_features_polygons ON spatial_features USING GIST(geom) 
     WHERE geom_type = 'ST_Polygon' OR geom_type = 'ST_MultiPolygon';
 
--- Add constraint to ensure valid geometries
-ALTER TABLE spatial_features ADD CONSTRAINT IF NOT EXISTS enforce_valid_geom 
-    CHECK (ST_IsValid(geom));
+-- Add constraint to ensure valid geometries (PostgreSQL 15 compatible)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'enforce_valid_geom'
+  ) THEN
+    ALTER TABLE spatial_features ADD CONSTRAINT enforce_valid_geom
+      CHECK (ST_IsValid(geom));
+  END IF;
+END;
+$$;
 
 -- Trigger to automatically update geom_type when geometry is inserted/updated
 CREATE OR REPLACE FUNCTION update_geom_type()

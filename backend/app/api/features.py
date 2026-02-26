@@ -113,7 +113,7 @@ async def list_features(
     )
 
 
-@router.get("/{feature_id}", response_model=Feature)
+@router.get("/{feature_id:int}", response_model=Feature)
 async def get_feature(
     feature_id: int,
     current_user: User = Depends(require_authenticated)

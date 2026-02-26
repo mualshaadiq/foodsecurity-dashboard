@@ -1,5 +1,6 @@
 // ── Styles ───────────────────────────────────────────────────────────────
 import 'maplibre-gl/dist/maplibre-gl.css';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import './styles/main.css';
 import './styles/navbar.css';
 import './styles/tabs.css';
@@ -10,6 +11,7 @@ import './styles/legend.css';
 import './styles/charts.css';
 import './styles/summary.css';
 import './styles/select-field.css';
+import './styles/temporal.css';
 
 // ── Auth ─────────────────────────────────────────────────────────────────
 import { authManager } from './auth/auth-manager.js';
@@ -25,6 +27,7 @@ import { addCropHealthLayers }          from './map/layers/crop-health-layers.js
 import { addDisasterLayers }            from './map/layers/disaster-layers.js';
 import { addYieldLayers }               from './map/layers/yield-layers.js';
 import { setupMapInteractions }         from './map/interactions.js';
+import { initDrawControl }              from './map/draw-control.js';
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
 import { TabManager }                   from './tabs/tab-manager.js';
@@ -34,13 +37,16 @@ import { initCropHealthTab }            from './tabs/crop-health.js';
 import { initDisasterRiskTab }          from './tabs/disaster-risk.js';
 import { initYieldPredictionTab }       from './tabs/yield-prediction.js';
 import { initSummaryTab }               from './tabs/summary.js';
+import { initImageryTab }              from './tabs/imagery.js';
 
 // ── Components ────────────────────────────────────────────────────────────
 import { initSearch }                   from './components/search.js';
 import { loadStats }                    from './components/stats.js';
 import { initSidebarControls }          from './components/sidebar.js';
 import { mountSelectFields,
+         initAoiSelectors,
          sfCategoryFilter }             from './components/select-fields.js';
+import { initTimeSlider }              from './components/time-slider.js';
 
 // ── API ───────────────────────────────────────────────────────────────────
 import { exportData }                   from './api/export.js';
@@ -68,6 +74,9 @@ function boot() {
         // Map interactions (click popups, hover cursor)
         setupMapInteractions(map);
 
+        // Draw control for AoI polygon drawing (must be before tab init)
+        initDrawControl(map);
+
         // Tabs
         const tabManager = new TabManager(map);
         tabManager.restoreFromHash();
@@ -79,6 +88,12 @@ function boot() {
         initDisasterRiskTab(map);
         initYieldPredictionTab(map);
 
+        // Imagery tab (Sentinel-2 + future Planet)
+        initImageryTab(map);
+
+        // Global time slider (controls temporal tabs)
+        initTimeSlider(map);
+
         // Summary tab (async — loads charts)
         if (authManager.isAuthenticated()) initSummaryTab();
 
@@ -87,6 +102,9 @@ function boot() {
 
         // Mount custom SelectField widgets
         mountSelectFields();
+
+        // Populate AOI selectors (requires auth)
+        if (authManager.isAuthenticated()) initAoiSelectors();
 
         // Search
         initSearch(map);
@@ -104,6 +122,7 @@ function boot() {
         if (e.detail.authenticated) {
             loadStats(map);
             loadCategoryFilter();
+            initAoiSelectors();
             initSummaryTab();
         } else {
             const statsEl = document.getElementById('stats-display');

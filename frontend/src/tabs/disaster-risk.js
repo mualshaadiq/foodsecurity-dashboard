@@ -1,6 +1,6 @@
 import { getWeather } from '@/api/food-security.js';
 import { renderWeatherCard } from '@/components/weather-card.js';
-import { sfDisasterProvince } from '@/components/select-fields.js';
+import { sfDisasterAoi } from '@/components/select-fields.js';
 
 /**
  * Disaster Risk Management tab — Flood risk, drought, weather panel.
@@ -11,16 +11,16 @@ export function initDisasterRiskTab(map) {
     _bindVisibilityToggle(map, 'toggle-flood-risk',   'flood-risk');
     _bindVisibilityToggle(map, 'toggle-drought',      'drought-zones');
 
-    sfDisasterProvince.setOnChange((vals) => loadWeather(vals[0] || ''));
-    if (sfDisasterProvince.getValue().length) loadWeather(sfDisasterProvince.getValue()[0]);
+    sfDisasterAoi.setOnChange((vals) => loadWeather(vals[0] || ''));
+    if (sfDisasterAoi.getValue().length) loadWeather(sfDisasterAoi.getValue()[0]);
 }
 
-async function loadWeather(provinceCode) {
+async function loadWeather(aoiId) {
     const container = document.getElementById('weather-card-container');
-    if (!container || !provinceCode) return;
+    if (!container || !aoiId) return;
 
     try {
-        const data = await getWeather(provinceCode);
+        const data = await getWeather(aoiId);
         renderWeatherCard(container, data);
     } catch (err) {
         container.innerHTML = `<p class="text-danger">Failed to load weather data.</p>`;

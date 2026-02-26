@@ -1,3 +1,5 @@
+import os
+from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
@@ -8,6 +10,21 @@ from app.db.connection import get_pool
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+# ── Dev bypass ────────────────────────────────────────────────────────────
+# When ENVIRONMENT=development and the request carries the magic token,
+# skip JWT validation entirely and return a synthetic admin user.
+_DEV_BYPASS_TOKEN = "dev-bypass-token"
+_DEV_USER = User(
+    id=0,
+    email="dev@example.com",
+    username="dev",
+    full_name="Dev User",
+    role="admin",
+    is_active=True,
+    created_at=datetime(2000, 1, 1, tzinfo=timezone.utc),
+)
+# ─────────────────────────────────────────────────────────────────────────
+
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     """Get current authenticated user from JWT token"""
@@ -16,7 +33,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
+    # Dev bypass — accept magic token in development environment
+    if token == _DEV_BYPASS_TOKEN and os.getenv("ENVIRONMENT", "development") == "development":
+        return _DEV_USER
+
     # Decode token
     payload = decode_access_token(token)
     if payload is None:

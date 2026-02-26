@@ -1,0 +1,262 @@
+/* ─── Global Time Slider Bar ─────────────────────────────────────────────── */
+#time-slider-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: rgba(var(--bg-panel-rgb, 40, 32, 20), 0.92);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(160, 120, 40, 0.18);
+    box-shadow: 0 -2px 16px rgba(0,0,0,.18);
+
+    /* Hidden by default; .visible shows it */
+    opacity: 0;
+    transform: translateY(100%);
+    pointer-events: none;
+    transition:
+        opacity   .28s cubic-bezier(0.4, 0, 0.2, 1),
+        transform .28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#time-slider-bar.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Play/Prev/Next controls */
+.ts-btn {
+    flex-shrink: 0;
+    background: none;
+    border: 1px solid rgba(160, 120, 40, 0.25);
+    border-radius: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.ts-btn:hover {
+    background: var(--accent-glow);
+    color: var(--accent);
+}
+
+/* Range slider */
+#time-range {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    min-width: 0;
+}
+
+/* Date label */
+#time-date-label {
+    flex-shrink: 0;
+    font-size: var(--type-note);
+    font-weight: 400;
+    color: var(--text-secondary);
+    letter-spacing: .04em;
+    min-width: 88px;
+    text-align: right;
+}
+
+/* ─── Draw Hint Bar ──────────────────────────────────────────────────────── */
+#draw-hint {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    z-index: 20;
+    background: var(--bg-card);
+    border: 1px solid rgba(160, 120, 40, 0.25);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 8px 20px;
+    font-size: var(--type-note);
+    font-weight: 400;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    pointer-events: none;
+    transition: transform .28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#draw-hint.visible {
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+/* ─── AOI Modal ──────────────────────────────────────────────────────────── */
+#aoi-modal .modal-content {
+    max-width: 480px;
+    width: 100%;
+}
+
+.aoi-layers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+    margin-top: 6px;
+}
+
+.aoi-draw-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0 4px;
+}
+
+#aoi-draw-status {
+    font-size: var(--type-note);
+    font-weight: 400;
+}
+
+.draw-status-ok    { color: var(--success); }
+.draw-status-empty { color: var(--text-muted); }
+
+.aoi-modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+/* ─── AOI List ───────────────────────────────────────────────────────────── */
+#aoi-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.aoi-list-empty,
+.aoi-list-loading {
+    font-size: var(--type-note);
+    color: var(--text-muted);
+    font-weight: 300;
+    text-align: center;
+    padding: 10px 0;
+}
+
+.aoi-card {
+    background: var(--bg-surface);
+    border: 1px solid rgba(160,120,40,.12);
+    border-radius: 4px;
+    padding: 10px 12px;
+}
+
+.aoi-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.aoi-card-name {
+    font-size: var(--type-small);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Group zoom + delete side-by-side */
+.aoi-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.aoi-zoom-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    transition: color .15s;
+}
+.aoi-zoom-btn:hover { color: var(--accent); }
+
+.aoi-delete-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 0;
+    line-height: 1;
+    transition: color .15s;
+}
+.aoi-delete-btn:hover { color: var(--danger); }
+
+.aoi-card-desc {
+    font-size: var(--type-note);
+    color: var(--text-secondary);
+    font-weight: 300;
+    margin: 0 0 6px;
+}
+
+.aoi-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.aoi-badge {
+    display: inline-block;
+    background: rgba(184, 112, 16, .12);
+    color: var(--accent);
+    font-size: var(--type-note);
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 2px;
+    letter-spacing: .03em;
+}
+
+.aoi-layer-tag {
+    display: inline-block;
+    background: var(--bg-input);
+    color: var(--text-muted);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: .02em;
+}
+
+.aoi-next-run {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 300;
+    margin: 4px 0 0;
+}
+
+/* ─── @mapbox/mapbox-gl-draw overrides to match app palette ─────────────── */
+.mapbox-gl-draw_ctrl-draw-btn,
+.mapboxgl-ctrl-group button {
+    background-color: var(--bg-card) !important;
+    border-color: rgba(160,120,40,.20) !important;
+}
+.mapboxgl-ctrl-group button:hover {
+    background-color: var(--accent-glow) !important;
+}
+.mapbox-gl-draw_polygon {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpolygon points='10,2 18,8 15,17 5,17 2,8' stroke='%23b87010' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") !important;
+}

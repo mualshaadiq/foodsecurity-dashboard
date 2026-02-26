@@ -2,6 +2,13 @@
 const AUTH_KEY = 'gis_app_token';
 const USER_KEY = 'gis_app_user';
 
+// ── Dev bypass ────────────────────────────────────────────────────────────
+// Set to false when real auth is wired up.
+const DEV_BYPASS = true;
+const DEV_USER   = { username: 'dev', role: 'admin', id: 0 };
+const DEV_TOKEN  = 'dev-bypass-token';
+// ─────────────────────────────────────────────────────────────────────────
+
 class AuthManager {
     constructor() {
         this.token = localStorage.getItem(AUTH_KEY);
@@ -116,7 +123,8 @@ class AuthManager {
         if (this.isAuthenticated()) {
             this.authButtons.style.display = 'none';
             this.userInfo.style.display = 'flex';
-            this.usernameDisplay.textContent = this.user.username;
+            const u = DEV_BYPASS ? DEV_USER : this.user;
+            this.usernameDisplay.textContent = u?.username ?? '';
         } else {
             this.authButtons.style.display = 'flex';
             this.userInfo.style.display = 'none';
@@ -124,19 +132,28 @@ class AuthManager {
     }
 
     isAuthenticated() {
+        if (DEV_BYPASS) return true;
         return !!this.token && !!this.user;
     }
 
     getToken() {
+        if (DEV_BYPASS) return DEV_TOKEN;
         return this.token;
     }
 
     getUser() {
+        if (DEV_BYPASS) return DEV_USER;
         return this.user;
     }
 
     async fetchWithAuth(url, options = {}) {
         if (!this.isAuthenticated()) throw new Error('Not authenticated');
+        if (DEV_BYPASS) {
+            return fetch(url, {
+                ...options,
+                headers: { ...options.headers, Authorization: `Bearer ${DEV_TOKEN}` },
+            });
+        }
 
         const authOptions = {
             ...options,
