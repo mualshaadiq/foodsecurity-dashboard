@@ -8,10 +8,10 @@
  */
 
 const SENTINEL_TILES = {
-    '2020': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020/default/g/{z}/{y}/{x}.jpg',
-    '2021': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021/default/g/{z}/{y}/{x}.jpg',
-    '2022': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2022/default/g/{z}/{y}/{x}.jpg',
-    '2023': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023/default/g/{z}/{y}/{x}.jpg',
+    '2020': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
+    '2021': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/g/{z}/{y}/{x}.jpg',
+    '2022': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2022_3857/default/g/{z}/{y}/{x}.jpg',
+    '2023': 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg',
 };
 
 const SOURCE_ID = 'sentinel-imagery';

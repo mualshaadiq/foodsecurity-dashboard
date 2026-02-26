@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str = ""
     ADMIN_USERNAME: str = ""
     ADMIN_PASSWORD: str = ""
+
+    # MinIO / S3 storage
+    MINIO_ENDPOINT: str = "minio:9000"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_BUCKET: str = "satellite-data"
+    MINIO_SECURE: bool = False
+    # Public-facing URL used to build presigned URLs (frontend must reach this)
+    MINIO_PUBLIC_URL: str = "http://localhost:9000"
     
     @property
     def cors_origins_list(self) -> List[str]:

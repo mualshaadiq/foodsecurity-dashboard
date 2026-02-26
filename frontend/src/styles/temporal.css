@@ -29,7 +29,96 @@
     pointer-events: auto;
 }
 
-/* Play/Prev/Next controls */
+/* Tick overlay — sits below the track */
+#ts-ticks {
+    position: absolute;
+    top: calc(100% - 16px);
+    left: 7px;   /* half thumb-width offset at each end */
+    right: 7px;
+    height: 16px;
+    pointer-events: none;    /* re-enabled on individual ticks by JS */
+    z-index: 1;
+}
+
+.ts-tick {
+    position: absolute;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 8px;
+    border-radius: 1px;
+    bottom: 0;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: height .12s, opacity .12s;
+    opacity: .7;
+}
+.ts-tick:hover { height: 12px; opacity: 1; }
+
+/* Archived date — green */
+.ts-tick--archived {
+    background: var(--success, #4a8c28);
+    width: 3px;
+    height: 10px;
+}
+
+/* Projected next run — dashed blue, triangle shape via clip-path */
+.ts-tick--next {
+    background: #3b82f6;
+    width: 3px;
+    height: 12px;
+    border-top: 2px dashed #3b82f6;
+    animation: ts-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ts-pulse {
+    0%, 100% { opacity: .6; }
+    50%       { opacity: 1; }
+}
+
+/* Default temporal tick */
+.ts-tick--default {
+    background: var(--text-muted);
+    opacity: .35;
+}
+
+/* Active tick */
+.ts-tick--active {
+    opacity: 1 !important;
+    height: 14px !important;
+}
+.ts-tick--archived.ts-tick--active { background: var(--accent); }
+.ts-tick--next.ts-tick--active     { background: #2563eb; }
+
+/* Label modifier when showing next-run date */
+.ts-label--next {
+    color: #3b82f6 !important;
+    font-weight: 600;
+}
+
+/* Mode badge shown in the label area */
+#time-slider-bar[data-mode="imagery"] #time-date-label::before {
+    content: '📡 ';
+    font-size: .85em;
+}
+
+/* Track wrapper — holds the range + the tick overlay */
+#ts-track-wrap {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    padding-bottom: 18px; /* room for tick marks below the track */
+}
+
+/* Range slider */
+#time-range {
+    width: 100%;
+    height: 4px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+}
 .ts-btn {
     flex-shrink: 0;
     background: none;
@@ -48,15 +137,6 @@
 .ts-btn:hover {
     background: var(--accent-glow);
     color: var(--accent);
-}
-
-/* Range slider */
-#time-range {
-    flex: 1;
-    height: 4px;
-    accent-color: var(--accent);
-    cursor: pointer;
-    min-width: 0;
 }
 
 /* Date label */

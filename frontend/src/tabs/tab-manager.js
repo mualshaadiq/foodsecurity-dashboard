@@ -18,7 +18,7 @@ const TAB_LAYERS = {
 const ALL_FS_LAYERS = Object.values(TAB_LAYERS).flat();
 
 /** Tabs that show temporal data and should display the time slider */
-const TEMPORAL_TABS = new Set(['ai', 'crop-health', 'disaster-risk', 'yield-prediction']);
+const TEMPORAL_TABS = new Set(['ai', 'crop-health', 'disaster-risk', 'yield-prediction', 'imagery']);
 
 export class TabManager {
     /**

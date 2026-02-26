@@ -33,6 +33,8 @@ services:
     depends_on:
       postgis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
@@ -43,6 +45,12 @@ services:
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET=${MINIO_BUCKET:-satellite-data}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_PUBLIC_URL=${MINIO_PUBLIC_URL:-http://localhost:9000}
     volumes:
       - ./backend:/app
       - ./data:/data:ro
@@ -51,6 +59,27 @@ services:
     networks:
       - gis-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: gis_minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console (http://localhost:9001)
+    networks:
+      - gis-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
 
   tegola:
@@ -75,6 +104,23 @@ services:
     command: serve --config /config/config.toml
     restart: unless-stopped
 
+  titiler:
+    image: ghcr.io/developmentseed/titiler:latest
+    container_name: gis_titiler
+    environment:
+      - TITILER_API_CORS_ORIGINS=["*"]
+      - TITILER_API_CORS_ALLOW_METHODS=["GET","HEAD","OPTIONS"]
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - GDAL_HTTP_MERGE_CONSECUTIVE_RANGES=YES
+      - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.TIF,.tiff
+      - VSI_CACHE=TRUE
+      - GDAL_CACHEMAX=200
+    ports:
+      - "8083:80"
+    networks:
+      - gis-network
+    restart: unless-stopped
+
   nginx:
     image: nginx:alpine
     container_name: gis_nginx
@@ -96,6 +142,8 @@ volumes:
   pgdata:
     driver: local
   tegola-cache:
+    driver: local
+  minio-data:
     driver: local
 
 networks:

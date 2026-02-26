@@ -27,6 +27,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/titiler': {
+        target: 'http://localhost:8083',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/titiler/, ''),
+      },
     },
   },
 

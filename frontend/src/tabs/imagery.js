@@ -22,6 +22,7 @@ import {
 import { searchSentinel2, granuleToGeoJson, getBrowseUrl, bboxFromFeature } from '@/api/cmr.js';
 import { getAOIs } from '@/api/food-security.js';
 import { archiveScene, listArchivedScenes, deleteArchivedScene } from '@/api/scene-archive.js';
+import { updateSliderWithArchiveDates } from '@/components/time-slider.js';
 import {
     initArchivedScenesLayer,
     showArchivedScenes,
@@ -29,6 +30,11 @@ import {
     clearArchivedScenes,
     _setMapRef,
 } from '@/map/layers/archived-scenes-layer.js';
+import {
+    initSceneImageryLayer,
+    showSceneImage,
+    hideSceneImage,
+} from '@/map/layers/scene-imagery-layer.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let _map            = null;
@@ -50,6 +56,22 @@ export async function initImageryTab(map) {
     initArchivedScenesLayer(map);
     _setMapRef(map);
 
+    // Scene preview image overlay
+    initSceneImageryLayer(map);
+
+    // Show imagery on slider date change
+    window.addEventListener('temporal-date-changed', (e) => {
+        if (e.detail.mode !== 'imagery') return;
+        const scene = _archivedScenes.find(
+            (s) => s.properties?.acq_date === e.detail.date
+        );
+        if (scene?.geometry) {
+            showSceneImage(scene.preview_url, scene.geometry, 0.85, scene.visual_url || null);
+        } else {
+            hideSceneImage();
+        }
+    });
+
     // ── Cloudless mosaic controls ──────────────────────────────────────
     const toggleEl  = document.getElementById('toggle-sentinel');
     const yearEl    = document.getElementById('sentinel-year-select');
@@ -66,6 +88,7 @@ export async function initImageryTab(map) {
     // Load archived scenes whenever AOI selection changes
     document.getElementById('imagery-aoi-select')?.addEventListener('change', (e) => {
         const id = Number(e.target.value) || null;
+        hideSceneImage();   // clear stale overlay when AOI changes
         _loadArchivedScenes(id);
     });
 
@@ -240,7 +263,7 @@ async function _archiveGranule(index) {
     }
 
     try {
-        if (btn) { btn.disabled = true; btn.textContent = '…'; }
+        if (btn) { btn.disabled = true; btn.textContent = '↑'; btn.title = 'Uploading to MinIO…'; }
         await archiveScene({
             stacItem:  granule,
             aoiId,
@@ -265,8 +288,10 @@ async function _loadArchivedScenes(aoiId) {
     try {
         _archivedScenes = await listArchivedScenes(aoiId ?? null);
         showArchivedScenes(_archivedScenes);
+        updateSliderWithArchiveDates(_archivedScenes);
 
         if (!_archivedScenes.length) {
+            hideSceneImage();   // no scenes — clear any stale overlay
             listEl.innerHTML = '<p class="imagery-msg">No archived scenes for this AOI.</p>';
             return;
         }
@@ -303,13 +328,15 @@ async function _loadArchivedScenes(aoiId) {
 }
 
 function _renderArchivedCard(scene) {
-    const p       = scene.properties ?? {};
-    const date    = p.acq_date || '—';
-    const cloud   = p.cloud_cover != null ? `${Number(p.cloud_cover).toFixed(1)}%` : 'N/A';
-    const plat    = (p.platform ?? 'S2').replace('sentinel-', 'S').toUpperCase();
-    const range   = (p.date_start && p.date_end) ? `${p.date_start} → ${p.date_end}` : '';
-    const thumb   = p.thumbnail || '';
-    const id      = scene.id;
+    const p      = scene.properties ?? {};
+    const date   = p.acq_date || '—';
+    const cloud  = p.cloud_cover != null ? `${Number(p.cloud_cover).toFixed(1)}%` : 'N/A';
+    const plat   = (p.platform ?? 'S2').replace('sentinel-', 'S').toUpperCase();
+    const range  = (p.date_start && p.date_end) ? `${p.date_start} → ${p.date_end}` : '';
+    // prefer presigned MinIO URL, fall back to original STAC thumbnail
+    const thumb  = scene.preview_url || p.thumbnail || '';
+    const path   = p.object_key || '';           // e.g. sentinel-2a/2026/02/26/…-preview.jpg
+    const id     = scene.id;
 
     return `
         <div class="archived-scene-card">
@@ -324,6 +351,7 @@ function _renderArchivedCard(scene) {
                     <span class="cmr-short-name">${plat}</span>
                 </div>
                 ${range ? `<div class="archived-scene-range">${range}</div>` : ''}
+                ${path  ? `<div class="archived-scene-path" title="${path}">${path}</div>` : ''}
             </div>
             <div class="archived-scene-actions">
                 <button class="archived-scene-zoom" data-id="${id}" title="Zoom to scene">⊕</button>
