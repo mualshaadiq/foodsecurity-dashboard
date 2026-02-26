@@ -1,4 +1,4 @@
-// Authentication Management
+// Authentication Manager
 const AUTH_KEY = 'gis_app_token';
 const USER_KEY = 'gis_app_user';
 
@@ -6,11 +6,9 @@ class AuthManager {
     constructor() {
         this.token = localStorage.getItem(AUTH_KEY);
         this.user = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
-        this.initializeUI();
     }
 
     initializeUI() {
-        // Get UI elements
         this.loginBtn = document.getElementById('login-btn');
         this.logoutBtn = document.getElementById('logout-btn');
         this.loginModal = document.getElementById('login-modal');
@@ -21,20 +19,15 @@ class AuthManager {
         this.loginError = document.getElementById('login-error');
         this.closeModal = this.loginModal.querySelector('.close');
 
-        // Event listeners
         this.loginBtn.addEventListener('click', () => this.showLoginModal());
         this.logoutBtn.addEventListener('click', () => this.logout());
         this.closeModal.addEventListener('click', () => this.hideLoginModal());
         this.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
-        
-        // Close modal on outside click
+
         window.addEventListener('click', (e) => {
-            if (e.target === this.loginModal) {
-                this.hideLoginModal();
-            }
+            if (e.target === this.loginModal) this.hideLoginModal();
         });
 
-        // Update UI based on auth state
         this.updateUI();
     }
 
@@ -53,22 +46,19 @@ class AuthManager {
 
     async handleLogin(event) {
         event.preventDefault();
-        
+
         const username = document.getElementById('login-username').value;
         const password = document.getElementById('login-password').value;
 
         try {
-            // Create form data for OAuth2
             const formData = new URLSearchParams();
             formData.append('username', username);
             formData.append('password', password);
 
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: formData
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData,
             });
 
             if (!response.ok) {
@@ -77,23 +67,16 @@ class AuthManager {
             }
 
             const data = await response.json();
-            
-            // Store token
             this.token = data.access_token;
             localStorage.setItem(AUTH_KEY, this.token);
 
-            // Get user info
             await this.fetchUserInfo();
-
-            // Update UI
             this.updateUI();
             this.hideLoginModal();
 
-            // Trigger custom event for other components
-            window.dispatchEvent(new CustomEvent('auth-changed', { 
-                detail: { authenticated: true, user: this.user } 
+            window.dispatchEvent(new CustomEvent('auth-changed', {
+                detail: { authenticated: true, user: this.user },
             }));
-
         } catch (error) {
             console.error('Login error:', error);
             this.loginError.textContent = error.message;
@@ -104,18 +87,13 @@ class AuthManager {
     async fetchUserInfo() {
         try {
             const response = await fetch('/api/auth/me', {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`
-                }
+                headers: { Authorization: `Bearer ${this.token}` },
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch user info');
-            }
+            if (!response.ok) throw new Error('Failed to fetch user info');
 
             this.user = await response.json();
             localStorage.setItem(USER_KEY, JSON.stringify(this.user));
-            
         } catch (error) {
             console.error('Failed to fetch user info:', error);
             this.logout();
@@ -127,12 +105,10 @@ class AuthManager {
         this.user = null;
         localStorage.removeItem(AUTH_KEY);
         localStorage.removeItem(USER_KEY);
-        
         this.updateUI();
 
-        // Trigger custom event
-        window.dispatchEvent(new CustomEvent('auth-changed', { 
-            detail: { authenticated: false } 
+        window.dispatchEvent(new CustomEvent('auth-changed', {
+            detail: { authenticated: false },
         }));
     }
 
@@ -160,21 +136,18 @@ class AuthManager {
     }
 
     async fetchWithAuth(url, options = {}) {
-        if (!this.isAuthenticated()) {
-            throw new Error('Not authenticated');
-        }
+        if (!this.isAuthenticated()) throw new Error('Not authenticated');
 
         const authOptions = {
             ...options,
             headers: {
                 ...options.headers,
-                'Authorization': `Bearer ${this.token}`
-            }
+                Authorization: `Bearer ${this.token}`,
+            },
         };
 
         const response = await fetch(url, authOptions);
 
-        // If unauthorized, logout
         if (response.status === 401) {
             this.logout();
             throw new Error('Session expired. Please login again.');
@@ -184,8 +157,8 @@ class AuthManager {
     }
 }
 
-// Initialize auth manager
-const authManager = new AuthManager();
+// Singleton instance — shared across the whole app
+export const authManager = new AuthManager();
 
-// Export for use in other scripts
+// Keep window reference for any legacy inline scripts
 window.authManager = authManager;

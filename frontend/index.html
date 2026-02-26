@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GIS Web Application</title>
-    
-    <!-- Custom styles -->
-    <link rel="stylesheet" href="styles.css">
+    <title>Food Security Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Navigation Bar -->
+    <!-- ── Navbar ─────────────────────────────────────────────────────── -->
     <nav class="navbar">
         <div class="nav-brand">
-            <h1>🗺️ GIS Web Application</h1>
+            <h1>🌾 Food Security Dashboard</h1>
         </div>
         <div class="nav-menu">
-            <div id="user-info" class="user-info" style="display: none;">
+            <div id="user-info" class="user-info" style="display:none;">
                 <span id="username-display"></span>
-                <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                <button id="logout-btn" class="btn btn-ghost">Logout</button>
             </div>
             <div id="auth-buttons" class="auth-buttons">
                 <button id="login-btn" class="btn btn-primary">Login</button>
@@ -25,119 +25,216 @@
         </div>
     </nav>
 
-    <!-- Main Container -->
+    <!-- ── Tab Bar ────────────────────────────────────────────────────── -->
+    <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="asset-management">Asset Management</button>
+        <button class="tab-btn" data-tab="ai">AI Analysis</button>
+        <button class="tab-btn" data-tab="crop-health">Crop Health</button>
+        <button class="tab-btn" data-tab="disaster-risk">Disaster Risk</button>
+        <button class="tab-btn" data-tab="yield-prediction">Yield Prediction</button>
+        <button class="tab-btn" data-tab="summary">Summary</button>
+        <button class="tab-btn" data-tab="basemap">Base Map</button>
+    </nav>
+
+    <!-- ── Main Container ─────────────────────────────────────────────── -->
     <div class="container">
+
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-section">
-                <h3>Filters</h3>
-                <div class="filter-group">
-                    <label for="category-filter">Category</label>
-                    <select id="category-filter" class="form-control">
-                        <option value="">All Categories</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Geometry Type</label>
+
+            <!-- ── Tab 1: Asset Management ────────────────────────────── -->
+            <div class="tab-panel" id="panel-asset-management">
+                <div class="sidebar-section">
+                    <h3>Layers</h3>
                     <div class="checkbox-group">
-                        <label>
-                            <input type="checkbox" id="show-points" checked> Points
-                        </label>
-                        <label>
-                            <input type="checkbox" id="show-lines" checked> Lines
-                        </label>
-                        <label>
-                            <input type="checkbox" id="show-polygons" checked> Polygons
-                        </label>
+                        <label class="sw"><input type="checkbox" id="toggle-lsd" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">LSD (Lahan Sawah Dilindungi)</span></label>
+                        <label class="sw"><input type="checkbox" id="toggle-lbs" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">LBS (Lahan Baku Sawah)</span></label>
+                        <label class="sw"><input type="checkbox" id="toggle-food-estate" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Food Estate</span></label>
+                        <label class="sw"><input type="checkbox" id="toggle-aoi" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">AOI</span></label>
+                        <label class="sw"><input type="checkbox" id="toggle-irrigation" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Irrigation</span></label>
                     </div>
                 </div>
-                <button id="apply-filters-btn" class="btn btn-primary btn-block">Apply Filters</button>
-                <button id="reset-filters-btn" class="btn btn-secondary btn-block">Reset</button>
-            </div>
-
-            <div class="sidebar-section">
-                <h3>Search</h3>
-                <input type="text" id="search-input" class="form-control" placeholder="Search features...">
-                <div id="search-results" class="search-results"></div>
-            </div>
-
-            <div class="sidebar-section">
-                <h3>Export</h3>
-                <button id="export-geojson-btn" class="btn btn-success btn-block">Export GeoJSON</button>
-                <button id="export-shapefile-btn" class="btn btn-success btn-block">Export Shapefile</button>
-                <button id="export-csv-btn" class="btn btn-success btn-block">Export CSV</button>
-            </div>
-
-            <div class="sidebar-section">
-                <h3>Statistics</h3>
-                <div id="stats-display">
-                    <p>Login to view statistics</p>
+                <div class="sidebar-section">
+                    <h3>AOI</h3>
+                    <button id="draw-aoi-btn" class="btn btn-primary btn-block">✏️ Draw AOI</button>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Legend</h3>
+                    <div id="legend-asset" class="legend"></div>
                 </div>
             </div>
+
+            <!-- ── Tab 2: AI ───────────────────────────────────────────── -->
+            <div class="tab-panel" id="panel-ai">
+                <div class="sidebar-section">
+                    <h3>Delineation</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-farm-boundary" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Farm Boundary</span></label>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Classification</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-crop-classification" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Crop Classification</span></label>
+                    </div>
+                    <div id="legend-crop" class="legend" style="margin-top:10px;"></div>
+                </div>
+            </div>
+
+            <!-- ── Tab 3: Crop Health ──────────────────────────────────── -->
+            <div class="tab-panel" id="panel-crop-health">
+                <div class="sidebar-section">
+                    <h3>NDVI</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-ndvi" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">NDVI Zones</span></label>
+                    </div>
+                    <div class="form-group" style="margin-top:12px;">
+                        <label for="ndvi-date-slider">Observation Date</label>
+                        <input type="date" id="ndvi-date-slider" class="form-control">
+                        <span id="ndvi-date-label" style="font-size:12px;color:#64748b;"></span>
+                    </div>
+                    <div id="legend-ndvi" class="legend" style="margin-top:10px;"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Fertilizer Zones</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-fertilizer" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Fertilizer / Crop Zoning</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Tab 4: Disaster Risk ────────────────────────────────── -->
+            <div class="tab-panel" id="panel-disaster-risk">
+                <div class="sidebar-section">
+                    <h3>Risk Layers</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-flood-risk" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Flood Risk</span></label>
+                        <label class="sw"><input type="checkbox" id="toggle-drought" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Drought Zones</span></label>
+                    </div>
+                    <div id="legend-flood" class="legend" style="margin-top:10px;"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Weather</h3>
+                    <div id="disaster-province-select-mount"></div>
+                    <div id="weather-card-container"></div>
+                </div>
+            </div>
+
+            <!-- ── Tab 5: Yield Prediction ────────────────────────────── -->
+            <div class="tab-panel" id="panel-yield-prediction">
+                <div class="sidebar-section">
+                    <h3>Yield Choropleth</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-yield-zones" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Predicted Yield Zones</span></label>
+                    </div>
+                    <div id="legend-yield" class="legend" style="margin-top:10px;"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>By Province</h3>
+                    <div id="yield-province-select-mount"></div>
+                    <div id="yield-stats-container"></div>
+                </div>
+            </div>
+
+            <!-- ── Tab 6: Summary Dashboard ───────────────────────────── -->
+            <div class="tab-panel" id="panel-summary">
+                <div class="sidebar-section">
+                    <h3>Filters</h3>
+                    <div id="summary-province-filter-mount"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Asset Information</h3>
+                    <div class="chart-card">
+                        <h4>Farm Area per Province (ha)</h4>
+                        <canvas id="chart-farm-area"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>Paddy Area per Province (ha)</h4>
+                        <canvas id="chart-paddy-area"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>Crop Type Distribution</h4>
+                        <canvas id="chart-crop-type"></canvas>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Monthly Report</h3>
+                    <table id="monthly-report-table">
+                        <thead>
+                            <tr>
+                                <th>Province</th>
+                                <th>Farm Area</th>
+                                <th>Paddy Area</th>
+                                <th>Pred. Yield</th>
+                                <th>Fertilizer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5">Login to view report</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── Tab 7: Base Map ─────────────────────────────────────── -->
+            <div class="tab-panel" id="panel-basemap">
+                <div class="sidebar-section">
+                    <h3>Layer Filters</h3>
+                    <div id="category-filter-mount"></div>
+                    <div class="filter-group">
+                        <label>Geometry Type</label>
+                        <div class="checkbox-group">
+                            <label class="sw"><input type="checkbox" id="show-points" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Points</span></label>
+                            <label class="sw"><input type="checkbox" id="show-lines" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Lines</span></label>
+                            <label class="sw"><input type="checkbox" id="show-polygons" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Polygons</span></label>
+                        </div>
+                    </div>
+                    <button id="apply-filters-btn" class="btn btn-primary btn-block">Apply Filters</button>
+                    <button id="reset-filters-btn" class="btn btn-secondary btn-block">Reset</button>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Search Features</h3>
+                    <div class="search-wrap">
+                        <input type="text" id="search-input" class="form-control" placeholder="Search features…">
+                    </div>
+                    <div id="search-results" class="search-results"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Export Data</h3>
+                    <button id="export-geojson-btn"   class="btn btn-success btn-block">Export GeoJSON</button>
+                    <button id="export-shapefile-btn" class="btn btn-success btn-block">Export Shapefile</button>
+                    <button id="export-csv-btn"       class="btn btn-success btn-block">Export CSV</button>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Statistics</h3>
+                    <div id="stats-display"><p>Login to view statistics</p></div>
+                </div>
+            </div>
+
         </aside>
 
-        <!-- Map Container -->
+        <!-- Map -->
         <main class="map-container">
             <div id="map"></div>
-            
-            <!-- Basemap Selector -->
-            <div class="basemap-selector">
-                <div class="basemap-header">
-                    <h4>🗺️ Basemap</h4>
-                    <button class="basemap-toggle" id="basemap-toggle">▼</button>
-                </div>
-                <div class="basemap-options" id="basemap-options">
-                    <div class="basemap-option active" data-basemap="esri-dark">
-                        <div class="basemap-preview" style="background: linear-gradient(135deg, #2c3e50, #34495e);">
-                            <span class="basemap-label">Esri Dark</span>
-                        </div>
-                    </div>
-                    <div class="basemap-option" data-basemap="esri-streets">
-                        <div class="basemap-preview" style="background: linear-gradient(135deg, #ecf0f1, #bdc3c7);">
-                            <span class="basemap-label">Esri Streets</span>
-                        </div>
-                    </div>
-                    <div class="basemap-option" data-basemap="esri-satellite">
-                        <div class="basemap-preview" style="background: linear-gradient(135deg, #1e3a5f, #2c5f2d);">
-                            <span class="basemap-label">Esri Satellite</span>
-                        </div>
-                    </div>
-                    <div class="basemap-option" data-basemap="osm">
-                        <div class="basemap-preview" style="background: linear-gradient(135deg, #f0ede4, #c6b8a6);">
-                            <span class="basemap-label">OpenStreetMap</span>
-                        </div>
-                    </div>
-                    <div class="basemap-option" data-basemap="carto-light">
-                        <div class="basemap-preview" style="background: linear-gradient(135deg, #ffffff, #f5f5f5);">
-                            <span class="basemap-label">Carto Light</span>
-                        </div>
-                    </div>
-                    <div class="basemap-option" data-basemap="carto-dark">
-                        <div class="basemap-preview" style="background: linear-gradient(135deg, #2c3e50, #1a252f);">
-                            <span class="basemap-label">Carto Dark</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="loading" class="loading" style="display: none;">
+
+            <div id="loading" class="loading" style="display:none;">
                 <div class="spinner"></div>
             </div>
         </main>
     </div>
 
-    <!-- Login Modal -->
+    <!-- ── Login Modal ────────────────────────────────────────────────── -->
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>Login</h2>
             <form id="login-form">
                 <div class="form-group">
-                    <label for="login-username">Username</label>
+                    <label for="login-username">Username <span class="req">*</span></label>
                     <input type="text" id="login-username" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="login-password">Password</label>
+                    <label for="login-password">Password <span class="req">*</span></label>
                     <input type="password" id="login-password" class="form-control" required>
                 </div>
                 <div id="login-error" class="error-message"></div>
@@ -146,15 +243,7 @@
         </div>
     </div>
 
-    <!-- Feature Info Popup (for click events) -->
-    <div id="feature-popup" class="popup" style="display: none;">
-        <div class="popup-content">
-            <span class="popup-close">&times;</span>
-            <div id="feature-info"></div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script type="module" src="./main.js"></script>
+    <!-- Entry point -->
+    <script type="module" src="./src/main.js"></script>
 </body>
 </html>

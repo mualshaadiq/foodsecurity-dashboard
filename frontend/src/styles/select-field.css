@@ -1,0 +1,281 @@
+/* ─── SelectField  (Aetosky Design System · node 6630-2700) ─────────────── */
+/*
+ * Theme: adapts to the project's warm-cream palette.
+ * The Figma design uses a dark surface (#2b2b2b) with white text.
+ * Here we map those dark tokens → our warm-cream tokens so the widget
+ * integrates naturally while preserving the exact structural design.
+ */
+
+/* ── Root wrapper ─────────────────────────────────────────────────────── */
+.sf-root {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    font-family: 'Poppins', system-ui, sans-serif;
+}
+
+/* ── Label row ────────────────────────────────────────────────────────── */
+.sf-label-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sf-label {
+    font-size: var(--type-small);     /* 14px — scale-02 */
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.sf-mandatory {
+    font-size: var(--type-small);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--danger);
+}
+
+/* ── Trigger button ───────────────────────────────────────────────────── */
+.sf-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 48px;                         /* Figma: 48px field height */
+    padding: 0 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;                   /* Figma: sharp rectangle */
+    cursor: pointer;
+    transition: border-color .18s, box-shadow .18s;
+    text-align: left;
+}
+
+.sf-trigger:hover {
+    border-color: var(--accent-dim);
+}
+
+.sf-trigger:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.sf-trigger--open {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.sf-trigger--open .sf-chevron {
+    transform: rotate(180deg);
+}
+
+/* Trigger text */
+.sf-trigger-text {
+    flex: 1 0 0;
+    font-size: var(--type-body);      /* 16px — scale-03, Body Base */
+    font-weight: 300;
+    line-height: 1.5;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.sf-trigger-text.sf-placeholder {
+    color: var(--text-muted);
+}
+
+/* Chevron icon */
+.sf-chevron {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .2s ease;
+}
+
+/* ── Dropdown panel ───────────────────────────────────────────────────── */
+.sf-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    min-width: 240px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    box-shadow: var(--shadow-md);
+    z-index: 300;
+    display: none;            /* hidden by default */
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sf-dropdown--open {
+    display: flex;
+}
+
+.sf-dropdown--above {
+    top: auto;
+    bottom: calc(100% + 4px);
+}
+
+/* ── Search row ───────────────────────────────────────────────────────── */
+.sf-search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.sf-search-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sf-search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: var(--type-small);     /* 14px — scale-02 */
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--text-primary);
+    outline: none;
+    /* remove native clear X in webkit */
+}
+.sf-search-input::-webkit-search-cancel-button { display: none; }
+
+.sf-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* ── Options list ─────────────────────────────────────────────────────── */
+.sf-list {
+    overflow-y: auto;
+    max-height: 240px;
+    scrollbar-width: none;      /* hide native scrollbar — custom one used */
+    -ms-overflow-style: none;
+}
+.sf-list::-webkit-scrollbar { display: none; }
+
+.sf-list-empty {
+    padding: 16px;
+    font-size: var(--type-small);
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* ── Option row ───────────────────────────────────────────────────────── */
+.sf-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background .12s;
+}
+
+.sf-option:hover {
+    background: var(--accent-glow);
+}
+
+.sf-option--selected {
+    background: rgba(184, 112, 16, 0.08);
+}
+
+.sf-option-label {
+    flex: 1 0 0;
+    font-size: var(--type-small);    /* 14px — scale-02 */
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Checkbox (multi mode — square) ──────────────────────────────────── */
+.sf-checkbox {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(160,120,40,.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    transition: background .15s, border-color .15s;
+}
+
+.sf-checkbox--checked {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fffdf5;
+}
+
+/* ── Radio (single mode — circle) ────────────────────────────────────── */
+.sf-radio {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(160,120,40,.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color .15s, background .15s;
+}
+
+.sf-radio--checked {
+    background: var(--bg-card);
+    border-color: var(--accent);
+}
+
+.sf-radio-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+/* ── Custom scrollbar (Figma dropdown/Variant3 — thin 2px thumb) ─────── */
+.sf-scroll-track {
+    position: absolute;
+    right: 0px;
+    top: 44px;           /* below search row */
+    bottom: 0;
+    width: 6px;
+    padding: 4px 2px;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s;
+}
+
+.sf-scroll-thumb {
+    position: relative;
+    width: 2px;
+    margin: 0 auto;
+    border-radius: 4px;
+    background: rgba(160,120,40,.4);
+    transition: top .1s;
+}

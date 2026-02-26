@@ -1,0 +1,70 @@
+/* ─── Tab Bar ───────────────────────────────────────────────────────────── */
+.tab-bar {
+    height: var(--tab-bar-height);
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: stretch;
+    overflow-x: auto;
+    white-space: nowrap;
+    z-index: 90;
+    position: relative;
+    scrollbar-width: none;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+    flex-shrink: 0;
+    padding: 0 20px;
+    border: none;
+    background: transparent;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: var(--type-small);
+    font-weight: 400;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .25s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color .25s cubic-bezier(0.4, 0, 0.2, 1),
+                background .25s cubic-bezier(0.4, 0, 0.2, 1),
+                font-weight .25s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: .02em;
+    position: relative;
+}
+
+.tab-btn:hover {
+    color: var(--text-secondary);
+    background: var(--accent-glow);
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+}
+
+/* Animated underline indicator — expands from centre on activation */
+.tab-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%; right: 50%;
+    height: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 6px rgba(184,112,16,.4);
+    border-radius: 2px 2px 0 0;
+    opacity: 0;
+    transition:
+        opacity .25s cubic-bezier(0.4, 0, 0.2, 1),
+        left    .3s  cubic-bezier(0.22, 1, 0.36, 1),
+        right   .3s  cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tab-btn.active::after {
+    left: 15%; right: 15%;
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .tab-btn { padding: 0 13px; font-size: 11px; }
+}

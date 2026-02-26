@@ -1,12 +1,22 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig({
+  // index.html lives at the project root (frontend/)
+  root: '.',
+  publicDir: 'public',
+
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
+
   server: {
     port: 3000,
     host: true,
     strictPort: true,
     proxy: {
-      // Proxy API requests to backend during development
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
@@ -16,9 +26,10 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
-      }
-    }
+      },
+    },
   },
+
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -26,13 +37,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'maplibre': ['maplibre-gl']
-        }
-      }
-    }
+          maplibre:  ['maplibre-gl'],
+          chartjs:   ['chart.js'],
+        },
+      },
+    },
   },
+
   preview: {
     port: 3000,
-    host: true
-  }
+    host: true,
+  },
 });

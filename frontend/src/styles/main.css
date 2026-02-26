@@ -1,0 +1,122 @@
+/* ─── Poppins (Aetosky Design System) ─────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+:root {
+    /* Backgrounds — warm wheat/cream */
+    --bg-base:       #faf3e0;
+    --bg-panel:      #f2e8c8;
+    --bg-surface:    #e6d8a8;
+    --bg-card:       #fffdf5;
+    --bg-input:      #fff9ee;
+
+    /* Accent — rich amber-gold */
+    --accent:        #b87010;
+    --accent-dim:    #965a0c;
+    --accent-deep:   #724408;
+    --accent-glow:   rgba(184, 112, 16, 0.14);
+    --accent-glow-strong: rgba(184, 112, 16, 0.30);
+
+    /* Status */
+    --success:       #4a8c28;
+    --warn:          #c07c12;
+    --danger:        #c43c20;
+
+    /* Text — dark olive + warm brown */
+    --text-primary:  #1a2e08;
+    --text-secondary:#5e4820;
+    --text-muted:    #9a7848;
+
+    /* Borders */
+    --border:        rgba(160, 120, 40, 0.22);
+    --border-strong: rgba(160, 120, 40, 0.46);
+
+    /* ─── Aetosky Type Scale ─────────────────────────────────────────────────────── */
+/* Sizes */
+--type-hero:       72px;  /* Title Hero   — 400 / lh 1.4 / ls -0.72px */
+--type-title:      48px;  /* Title Page   — 600 / lh 1.3 */
+--type-subtitle:   32px;  /* Subtitle     — 400 / lh 1.5 / ls -0.32px */
+--type-heading:    24px;  /* Heading      — 300 / lh 1.5 */
+--type-subheading: 20px;  /* Subheading   — 300 / lh 1.5 */
+--type-body:       16px;  /* Body Base    — 300 / lh 1.5 */
+--type-small:      14px;  /* Body Small   — 400 / lh 1.4 */
+--type-note:       12px;  /* Note         — 400 / lh 1.4 */
+
+/* Layout */
+    --sidebar-width:  380px;
+    --navbar-height:  58px;
+    --tab-bar-height: 42px;
+
+    /* Shadow */
+    --shadow-sm: 0 2px 8px rgba(100, 70, 20, .12);
+    --shadow-md: 0 4px 20px rgba(100, 70, 20, .18);
+    --shadow-glow: 0 0 16px rgba(184,112,16,.18);
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: 16px; /* scale-03 base */
+    font-weight: 300; /* Poppins Light default */
+    color: var(--text-primary);
+    background: var(--bg-base);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb {
+    background: var(--accent-deep);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+/* ─── Utility ───────────────────────────────────────────────────────────── */
+.text-danger  { color: var(--danger);  font-size: 12px; }
+.text-muted   { color: var(--text-muted); font-size: 12px; }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: var(--text-primary);
+}
+.data-table th,
+.data-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+.data-table th {
+    background: var(--bg-surface);
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    font-size: var(--type-note);
+}
+.data-table tr:hover td { background: var(--accent-glow); }
+
+.stats-list {
+    margin-left: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+/* ─── Divider ────────────────────────────────────────────────────────────── */
+.section-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+}

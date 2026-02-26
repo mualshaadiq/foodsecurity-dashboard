@@ -1,0 +1,96 @@
+/* ─── Summary Dashboard Layout ──────────────────────────────────────────── */
+
+.container.summary-mode .map-container { max-width: 50%; }
+.container.summary-mode .sidebar {
+    width: 50%;
+    max-width: none;
+}
+
+/* #panel-summary display is now controlled by .tab-panel.active in sidebar.css */
+
+/* Stat cards grid */
+.summary-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(160,120,40,.12);
+    border-radius: 4px;
+    padding: 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(100,70,20,.08);
+    transition: box-shadow .2s;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: .5;
+    border-radius: 4px 4px 0 0;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 16px rgba(100,70,20,.14);
+}
+
+.stat-card .stat-value {
+    font-size: var(--type-heading);
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.stat-card .stat-label {
+    font-size: var(--type-note);
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-top: 4px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+/* Monthly report table */
+#monthly-report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+#monthly-report-table th {
+    background: var(--bg-surface);
+    color: var(--accent);
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    font-size: var(--type-note);
+}
+
+#monthly-report-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: var(--type-small);
+    font-weight: 300;
+}
+
+#monthly-report-table tr:hover td {
+    background: var(--accent-glow);
+    color: var(--text-primary);
+}
+
+@media (max-width: 1024px) {
+    .container.summary-mode .map-container { max-width: 100%; }
+    .container.summary-mode { flex-direction: column; }
+    .container.summary-mode .map-container { height: 280px; flex: none; }
+    .container.summary-mode .sidebar { width: 100%; max-width: 100%; height: calc(100% - 280px); }
+}

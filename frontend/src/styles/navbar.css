@@ -1,0 +1,81 @@
+/* ─── Navbar ────────────────────────────────────────────────────────────── */
+.navbar {
+    height: var(--navbar-height);
+    background: linear-gradient(90deg, #1e3508 0%, #2a4a0d 60%, #304f10 100%);
+    border-bottom: 1px solid rgba(184,112,16,.35);
+    color: var(--text-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    position: relative;
+    z-index: 100;
+    box-shadow: 0 1px 0 var(--border), var(--shadow-sm);
+}
+
+/* Subtle animated scan-line accent on bottom */
+.navbar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent) 40%, var(--accent) 60%, transparent 100%);
+    opacity: .5;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-brand h1 {
+    font-size: var(--type-subheading);
+    font-weight: 600;
+    letter-spacing: -.01em;
+    background: linear-gradient(135deg, #f5c842 0%, #fde99a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#username-display {
+    font-size: var(--type-small);
+    font-weight: 600;
+    color: #f5c842;
+    letter-spacing: .02em;
+}
+
+/* ─── System status dot ─────────────────────────────────────────────────── */
+.nav-brand::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse-dot 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--accent); }
+    50%       { opacity: .4; box-shadow: 0 0 12px var(--accent); }
+}
+
+@media (max-width: 768px) {
+    .nav-brand h1 { font-size: 1rem; }
+    .navbar { padding: 0 14px; }
+}
