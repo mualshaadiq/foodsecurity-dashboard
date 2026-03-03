@@ -1,0 +1,220 @@
+/* ============================================================
+   Layer Panel — floating bottom-right overlay on the map
+   ============================================================ */
+
+#layer-panel {
+    position: absolute;
+    bottom: 24px;
+    right: 12px;
+    z-index: 200;
+    min-width: 210px;
+    max-width: 260px;
+    border-radius: 10px;
+    background: rgba(18, 22, 30, 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+#layer-panel:hover {
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Toggle button ───────────────────────────────────────── */
+.lp-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 9px 14px;
+    background: transparent;
+    border: none;
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+
+.lp-toggle:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.lp-toggle .lp-caret {
+    display: inline-block;
+    font-size: 10px;
+    transition: transform 0.25s ease;
+    color: #94a3b8;
+}
+
+/* Collapsed state: body hidden, caret points down */
+#layer-panel.lp-collapsed .lp-caret {
+    transform: rotate(180deg);
+}
+
+/* ── Body ────────────────────────────────────────────────── */
+.lp-body {
+    max-height: 340px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease, padding 0.2s ease;
+    padding: 4px 0 10px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+#layer-panel.lp-collapsed .lp-body {
+    max-height: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.lp-body::-webkit-scrollbar { width: 4px; }
+.lp-body::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 2px; }
+
+/* ── Groups ──────────────────────────────────────────────── */
+.lp-group {
+    padding: 6px 0 2px;
+}
+
+.lp-group-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 14px 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+
+.lp-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.lp-dot-purple  { background: #a78bfa; }
+.lp-dot-green   { background: #34d399; }
+.lp-dot-red     { background: #f87171; }
+.lp-dot-yellow  { background: #fbbf24; }
+
+/* ── Items ───────────────────────────────────────────────── */
+.lp-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.lp-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.lp-item label {
+    font-size: 12px;
+    color: #cbd5e1;
+    cursor: pointer;
+    user-select: none;
+    flex: 1;
+}
+
+/* Custom checkbox */
+.lp-check {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid #475569;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lp-check:checked {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.lp-check:checked::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 1.5px;
+    left: 3.5px;
+    width: 4px;
+    height: 7px;
+    border: 2px solid #fff;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+}
+
+.lp-check:hover:not(:checked) {
+    border-color: #94a3b8;
+}
+
+/* Divider between groups */
+.lp-group + .lp-group {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin-top: 4px;
+    padding-top: 8px;
+}
+
+/* ============================================================
+   Monitoring Setting Tab — layer schedule rows
+   ============================================================ */
+
+.monitoring-row {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.ml-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.ml-group-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    flex-shrink: 0;
+}
+
+.ml-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary, #e2e8f0);
+    flex: 1;
+}
+
+.ml-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+

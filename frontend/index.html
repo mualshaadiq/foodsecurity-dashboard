@@ -28,12 +28,9 @@
     <!-- ── Tab Bar ────────────────────────────────────────────────────── -->
     <nav class="tab-bar">
         <button class="tab-btn active" data-tab="asset-management">Asset Management</button>
-        <button class="tab-btn" data-tab="ai">AI Analysis</button>
-        <button class="tab-btn" data-tab="crop-health">Crop Health</button>
-        <button class="tab-btn" data-tab="disaster-risk">Disaster Risk</button>
-        <button class="tab-btn" data-tab="yield-prediction">Yield Prediction</button>
-        <button class="tab-btn" data-tab="summary">Summary</button>
         <button class="tab-btn" data-tab="imagery">Imagery</button>
+        <button class="tab-btn" data-tab="monitoring-setting">Monitoring Setting</button>
+        <button class="tab-btn" data-tab="summary">Summary</button>
     </nav>
 
     <!-- ── Main Container ─────────────────────────────────────────────── -->
@@ -65,74 +62,61 @@
                 </div>
             </div>
 
-            <!-- ── Tab 2: AI ───────────────────────────────────────────── -->
-            <div class="tab-panel" id="panel-ai">
+            <!-- ── Tab 2: Monitoring Setting ─────────────────────────── -->
+            <div class="tab-panel" id="panel-monitoring-setting">
                 <div class="sidebar-section">
-                    <h3>Delineation</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-farm-boundary" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Farm Boundary</span></label>
+                    <h3>AOI Monitoring</h3>
+                    <p class="imagery-hint">Configure monitoring schedules and analysis layers per AOI. Use the <strong>Layer Panel</strong> on the map to toggle overlays.</p>
+                    <div class="filter-group">
+                        <label class="form-label">AOI</label>
+                        <select id="monitoring-aoi-select" class="form-control">
+                            <option value="">— select AOI —</option>
+                        </select>
                     </div>
                 </div>
-                <div class="sidebar-section">
-                    <h3>Classification</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-crop-classification" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Crop Classification</span></label>
+                <div class="sidebar-section" id="monitoring-config-section" style="display:none">
+                    <h3>Analysis Schedule</h3>
+                    <div class="monitoring-layer-table" id="monitoring-layer-table">
+                        <!-- Rows injected by monitoring-setting.js -->
                     </div>
-                    <div id="legend-crop" class="legend" style="margin-top:10px;"></div>
+                    <button id="monitoring-save-btn" class="btn btn-primary btn-block" style="margin-top:12px">💾 Save Schedule</button>
+                </div>
+                <div class="sidebar-section" id="monitoring-status-section" style="display:none">
+                    <h3>Last Run Status</h3>
+                    <div class="monitoring-status-grid" id="monitoring-status-grid">
+                        <!-- Status cards injected by monitoring-setting.js -->
+                    </div>
+                    <button id="monitoring-run-btn" class="btn btn-secondary btn-block" style="margin-top:8px">▶ Run Analysis Now</button>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Global Schedule</h3>
+                    <div class="filter-group">
+                        <label class="form-label">Default Interval</label>
+                        <div style="display:flex;gap:8px;">
+                            <input type="number" id="global-interval" class="form-control" value="7" min="1" max="365" style="width:80px;flex-shrink:0;">
+                            <select id="global-interval-unit" class="form-control">
+                                <option value="days">Days</option>
+                                <option value="weeks">Weeks</option>
+                                <option value="months">Months</option>
+                            </select>
+                        </div>
+                        <span class="form-desc">Applied to all new AOIs unless overridden.</span>
+                    </div>
+                    <div class="filter-group">
+                        <label class="form-label">Alert Threshold</label>
+                        <div class="monitoring-threshold-row">
+                            <span class="threshold-label">NDVI drop &gt;</span>
+                            <input type="number" id="alert-ndvi-drop" class="form-control" value="20" min="0" max="100" style="width:70px;"> <span class="threshold-unit">%</span>
+                        </div>
+                        <div class="monitoring-threshold-row">
+                            <span class="threshold-label">Cloud cover &lt;</span>
+                            <input type="number" id="alert-cloud-max" class="form-control" value="20" min="0" max="100" style="width:70px;"> <span class="threshold-unit">%</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- ── Tab 3: Crop Health ──────────────────────────────────── -->
-            <div class="tab-panel" id="panel-crop-health">
-                <div class="sidebar-section">
-                    <h3>NDVI</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-ndvi" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">NDVI Zones</span></label>
-                    </div>
-                    <div id="legend-ndvi" class="legend" style="margin-top:10px;"></div>
-                </div>
-                <div class="sidebar-section">
-                    <h3>Fertilizer Zones</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-fertilizer" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Fertilizer / Crop Zoning</span></label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ── Tab 4: Disaster Risk ────────────────────────────────── -->
-            <div class="tab-panel" id="panel-disaster-risk">
-                <div class="sidebar-section">
-                    <h3>Risk Layers</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-flood-risk" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Flood Risk</span></label>
-                        <label class="sw"><input type="checkbox" id="toggle-drought" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Drought Zones</span></label>
-                    </div>
-                    <div id="legend-flood" class="legend" style="margin-top:10px;"></div>
-                </div>
-                <div class="sidebar-section">
-                    <h3>Weather</h3>
-                    <div id="disaster-province-select-mount"></div>
-                    <div id="weather-card-container"></div>
-                </div>
-            </div>
-
-            <!-- ── Tab 5: Yield Prediction ────────────────────────────── -->
-            <div class="tab-panel" id="panel-yield-prediction">
-                <div class="sidebar-section">
-                    <h3>Yield Choropleth</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-yield-zones" class="sw-input" checked><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Predicted Yield Zones</span></label>
-                    </div>
-                    <div id="legend-yield" class="legend" style="margin-top:10px;"></div>
-                </div>
-                <div class="sidebar-section">
-                    <h3>By Province</h3>
-                    <div id="yield-province-select-mount"></div>
-                    <div id="yield-stats-container"></div>
-                </div>
-            </div>
-
-            <!-- ── Tab 6: Summary Dashboard ───────────────────────────── -->
+            <!-- ── Tab 3: Summary Dashboard ───────────────────────────── -->
             <div class="tab-panel" id="panel-summary">
                 <div class="sidebar-section">
                     <h3>Filters</h3>
@@ -252,6 +236,78 @@
 
             <!-- Draw hint bar -->
             <div id="draw-hint">🖊 Click to place vertices &nbsp;·&nbsp; Double-click to finish &nbsp;·&nbsp; ESC to cancel</div>
+
+            <!-- ── Floating Layer Panel (bottom-right) ──────────────── -->
+            <div id="layer-panel" class="layer-panel">
+                <button id="layer-panel-toggle" class="lp-toggle" title="Toggle Layers">
+                    <span class="lp-toggle-icon">&#9638;</span>
+                    <span class="lp-toggle-label">Layers</span>
+                    <span class="lp-caret">&#9650;</span>
+                </button>
+                <div class="lp-body" id="layer-panel-body">
+
+                    <!-- AI Analysis -->
+                    <div class="lp-group">
+                        <div class="lp-group-header">
+                            <span class="lp-dot" style="background:#a78bfa"></span>
+                            <span class="lp-group-name">AI Analysis</span>
+                        </div>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="lp-delineation" data-layers="farm-boundary,farm-boundary-outline">
+                            <span class="lp-item-text">Delineation</span>
+                        </label>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="lp-classification" data-layers="crop-classification">
+                            <span class="lp-item-text">Classification</span>
+                        </label>
+                    </div>
+
+                    <!-- Crop Health -->
+                    <div class="lp-group">
+                        <div class="lp-group-header">
+                            <span class="lp-dot" style="background:#34d399"></span>
+                            <span class="lp-group-name">Crop Health</span>
+                        </div>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="lp-ndvi" data-layers="ndvi-zones">
+                            <span class="lp-item-text">NDVI</span>
+                        </label>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="lp-fertilizer" data-layers="fertilizer-zones">
+                            <span class="lp-item-text">Fertilizer Zone</span>
+                        </label>
+                    </div>
+
+                    <!-- Disaster Risk -->
+                    <div class="lp-group">
+                        <div class="lp-group-header">
+                            <span class="lp-dot" style="background:#f87171"></span>
+                            <span class="lp-group-name">Disaster Risk</span>
+                        </div>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="lp-flood" data-layers="flood-risk">
+                            <span class="lp-item-text">Flood Risk</span>
+                        </label>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="lp-drought" data-layers="drought-zones">
+                            <span class="lp-item-text">Drought</span>
+                        </label>
+                    </div>
+
+                    <!-- Yield -->
+                    <div class="lp-group">
+                        <div class="lp-group-header">
+                            <span class="lp-dot" style="background:#fbbf24"></span>
+                            <span class="lp-group-name">Yield</span>
+                        </div>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="lp-yield" data-layers="yield-zones,yield-zones-outline">
+                            <span class="lp-item-text">Yield Prediction</span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
 
             <!-- Global time slider -->
             <div id="time-slider-bar">

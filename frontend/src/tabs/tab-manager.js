@@ -3,22 +3,21 @@
  * and MapLibre layer visibility per tab.
  */
 
-/** Map of tab ID → array of MapLibre layer IDs to show when that tab is active */
+/** Map of tab ID → array of MapLibre layer IDs to show when that tab is active.
+ *  Analysis layers (AI, crop-health, disaster, yield) are now controlled
+ *  exclusively by the floating Layer Panel (layer-panel.js). */
 const TAB_LAYERS = {
-    'asset-management': ['asset-polygons', 'asset-polygons-outline', 'irrigation-lines'],
-    'ai':               ['farm-boundary', 'farm-boundary-outline', 'crop-classification'],
-    'crop-health':      ['ndvi-zones', 'fertilizer-zones'],
-    'disaster-risk':    ['flood-risk', 'drought-zones'],
-    'yield-prediction': ['yield-zones', 'yield-zones-outline'],
-    'summary':          [],
-    'imagery':          [], // imagery layers handled separately by imagery.js
+    'asset-management':  ['lsd-fill', 'lsd-outline', 'lbs-fill', 'lbs-outline', 'asset-polygons', 'asset-polygons-outline', 'irrigation-lines'],
+    'monitoring-setting': [],
+    'summary':           [],
+    'imagery':           [], // imagery layers handled separately by imagery.js
 };
 
-/** All food-security layer IDs (hidden by default) */
+/** All food-security layer IDs managed by tab visibility (hidden by default) */
 const ALL_FS_LAYERS = Object.values(TAB_LAYERS).flat();
 
 /** Tabs that show temporal data and should display the time slider */
-const TEMPORAL_TABS = new Set(['ai', 'crop-health', 'disaster-risk', 'yield-prediction', 'imagery']);
+const TEMPORAL_TABS = new Set(['imagery']);
 
 export class TabManager {
     /**

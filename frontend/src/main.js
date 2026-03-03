@@ -12,6 +12,7 @@ import './styles/charts.css';
 import './styles/summary.css';
 import './styles/select-field.css';
 import './styles/temporal.css';
+import './styles/layer-panel.css';
 
 // ── Auth ─────────────────────────────────────────────────────────────────
 import { authManager } from './auth/auth-manager.js';
@@ -32,14 +33,12 @@ import { initDrawControl }              from './map/draw-control.js';
 // ── Tabs ──────────────────────────────────────────────────────────────────
 import { TabManager }                   from './tabs/tab-manager.js';
 import { initAssetManagementTab }       from './tabs/asset-management.js';
-import { initAITab }                    from './tabs/ai.js';
-import { initCropHealthTab }            from './tabs/crop-health.js';
-import { initDisasterRiskTab }          from './tabs/disaster-risk.js';
-import { initYieldPredictionTab }       from './tabs/yield-prediction.js';
+import { initMonitoringSettingTab }     from './tabs/monitoring-setting.js';
 import { initSummaryTab }               from './tabs/summary.js';
-import { initImageryTab }              from './tabs/imagery.js';
+import { initImageryTab }               from './tabs/imagery.js';
 
 // ── Components ────────────────────────────────────────────────────────────
+import { initLayerPanel }               from './components/layer-panel.js';
 import { initSearch }                   from './components/search.js';
 import { loadStats }                    from './components/stats.js';
 import { initSidebarControls }          from './components/sidebar.js';
@@ -83,13 +82,13 @@ function boot() {
 
         // Tab-specific controls
         initAssetManagementTab(map);
-        initAITab(map);
-        initCropHealthTab(map);
-        initDisasterRiskTab(map);
-        initYieldPredictionTab(map);
+        initMonitoringSettingTab(map);
 
         // Imagery tab (Sentinel-2 + future Planet)
         initImageryTab(map);
+
+        // Floating layer panel (bottom-right, always visible)
+        initLayerPanel(map);
 
         // Global time slider (controls temporal tabs)
         initTimeSlider(map);

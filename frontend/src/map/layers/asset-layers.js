@@ -1,10 +1,87 @@
 /**
  * Asset Management layers: LSD, LBS, Food Estate, AOI, Irrigation
- * Source-layer: 'asset_polygons' and 'irrigation_lines' (defined in tegola/config.toml)
+ * LBS is served from the dedicated 'food_monitoring' Tegola map (food-monitoring-tiles source).
  * @param {maplibregl.Map} map
  */
 export function addAssetLayers(map) {
-    // Asset polygons (LSD, LBS, Food Estate, AOI)
+    // ── LSD – Lahan Sawah Dilindungi ─────────────────────────────────────────
+    // Served from the food_monitoring Tegola map → lsd_50k_dilindungi layer.
+    map.addLayer({
+        id: 'lsd-fill',
+        type: 'fill',
+        source: 'food-monitoring-tiles',
+        'source-layer': 'lsd_50k_dilindungi',
+        minzoom: 7,
+        layout: { visibility: 'visible' },
+        paint: {
+            'fill-color': '#4ade80',
+            'fill-opacity': [
+                'interpolate', ['linear'], ['zoom'],
+                7,  0.65,
+                12, 0.5,
+                16, 0.35,
+            ],
+        },
+    });
+
+    map.addLayer({
+        id: 'lsd-outline',
+        type: 'line',
+        source: 'food-monitoring-tiles',
+        'source-layer': 'lsd_50k_dilindungi',
+        minzoom: 7,
+        layout: { visibility: 'visible' },
+        paint: {
+            'line-color': '#15803d',
+            'line-width': [
+                'interpolate', ['linear'], ['zoom'],
+                7,  0.3,
+                11, 0.8,
+                14, 1.4,
+            ],
+        },
+    });
+
+    // ── LBS – Lahan Baku Sawah Nasional ──────────────────────────────────────
+    // Served from the food_monitoring Tegola map → lbs_50k_nasional layer.
+    map.addLayer({
+        id: 'lbs-fill',
+        type: 'fill',
+        source: 'food-monitoring-tiles',
+        'source-layer': 'lbs_50k_nasional',
+        minzoom: 7,
+        layout: { visibility: 'visible' },
+        paint: {
+            'fill-color': '#facc15',
+            'fill-opacity': [
+                'interpolate', ['linear'], ['zoom'],
+                7,  0.65,
+                12, 0.5,
+                16, 0.35,
+            ],
+        },
+    });
+
+    map.addLayer({
+        id: 'lbs-outline',
+        type: 'line',
+        source: 'food-monitoring-tiles',
+        'source-layer': 'lbs_50k_nasional',
+        minzoom: 7,
+        layout: { visibility: 'visible' },
+        paint: {
+            'line-color': '#a16207',
+            'line-width': [
+                'interpolate', ['linear'], ['zoom'],
+                7,  0.3,
+                11, 0.8,
+                14, 1.4,
+            ],
+        },
+    });
+
+    // ── Placeholder combined asset-polygons (LSD, Food Estate, AOI) ──────────
+    // TODO: replace with dedicated layers once those tables are imported.
     map.addLayer({
         id: 'asset-polygons',
         type: 'fill',
@@ -15,7 +92,6 @@ export function addAssetLayers(map) {
             'fill-color': [
                 'match', ['get', 'category'],
                 'lsd',         '#4ade80',
-                'lbs',         '#facc15',
                 'food_estate', '#f97316',
                 'aoi',         '#a78bfa',
                 '#94a3b8',
@@ -49,4 +125,4 @@ export function addAssetLayers(map) {
 }
 
 /** IDs of all layers managed by this module */
-export const ASSET_LAYER_IDS = ['asset-polygons', 'asset-polygons-outline', 'irrigation-lines'];
+export const ASSET_LAYER_IDS = ['lsd-fill', 'lsd-outline', 'lbs-fill', 'lbs-outline', 'asset-polygons', 'asset-polygons-outline', 'irrigation-lines'];

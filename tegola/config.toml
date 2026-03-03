@@ -4,12 +4,6 @@
 [webserver]
 port = ":8080"
 
-# Cache configuration
-[cache]
-type = "file"
-basepath = "/tmp/tegola-cache"
-max_zoom = 16
-
 # PostGIS data provider
 [[providers]]
 name = "postgis"
@@ -18,135 +12,136 @@ uri = "postgres://gisuser:gispassword123@postgis:5432/gisdb"
 srid = 4326
 max_connections = 50
 
-    # Layer for points
+    # ── Points ────────────────────────────────────────────────────────────────
     [[providers.layers]]
     name = "points"
     geometry_fieldname = "geom"
     id_fieldname = "id"
     geometry_type = "MultiPoint"
     sql = """
-        SELECT 
-            id,
-            name,
-            category,
-            geom_type,
-            ST_AsMVTGeom(
-                geom,
-                !BBOX!,
-                4096,
-                256,
-                true
-            ) AS geom
+        SELECT
+            id, name, category, geom_type,
+            ST_AsBinary(geom) AS geom
         FROM spatial_features
         WHERE geom_type IN ('ST_Point', 'ST_MultiPoint')
-            AND geom && !BBOX!
-            AND ST_IsValid(geom)
+          AND geom && !BBOX!
+          AND ST_IsValid(geom)
     """
 
-    # Layer for lines with zoom-based simplification
+    # ── Lines ─────────────────────────────────────────────────────────────────
     [[providers.layers]]
     name = "lines"
     geometry_fieldname = "geom"
     id_fieldname = "id"
     geometry_type = "MultiLineString"
     sql = """
-        SELECT 
-            id,
-            name,
-            category,
-            geom_type,
-            ST_AsMVTGeom(
-                CASE 
+        SELECT
+            id, name, category, geom_type,
+            ST_AsBinary(
+                CASE
                     WHEN !ZOOM! < 10 THEN ST_Simplify(geom, 0.001)
                     WHEN !ZOOM! < 14 THEN ST_Simplify(geom, 0.0001)
                     ELSE geom
-                END,
-                !BBOX!,
-                4096,
-                256,
-                true
+                END
             ) AS geom
         FROM spatial_features
         WHERE geom_type IN ('ST_LineString', 'ST_MultiLineString')
-            AND geom && !BBOX!
-            AND ST_IsValid(geom)
+          AND geom && !BBOX!
+          AND ST_IsValid(geom)
     """
 
-    # Layer for polygons with aggressive simplification at low zooms
+    # ── Polygons (general spatial_features) ───────────────────────────────────
     [[providers.layers]]
     name = "polygons"
     geometry_fieldname = "geom"
     id_fieldname = "id"
     geometry_type = "MultiPolygon"
     sql = """
-        SELECT 
-            id,
-            name,
-            category,
-            geom_type,
-            ST_AsMVTGeom(
-                CASE 
-                    WHEN !ZOOM! < 8 THEN ST_Simplify(geom, 0.01)
+        SELECT
+            id, name, category, geom_type,
+            ST_AsBinary(
+                CASE
+                    WHEN !ZOOM! < 8  THEN ST_Simplify(geom, 0.01)
                     WHEN !ZOOM! < 12 THEN ST_Simplify(geom, 0.001)
                     WHEN !ZOOM! < 14 THEN ST_Simplify(geom, 0.0001)
                     ELSE geom
-                END,
-                !BBOX!,
-                4096,
-                256,
-                true
+                END
             ) AS geom
         FROM spatial_features
         WHERE geom_type IN ('ST_Polygon', 'ST_MultiPolygon')
-            AND geom && !BBOX!
-            AND ST_IsValid(geom)
+          AND geom && !BBOX!
+          AND ST_IsValid(geom)
     """
 
-    # Combined layer with all geometries (optional - use if you want a single layer)
+    # ── Lahan Baku Sawah Nasional (LBS) ───────────────────────────────────────
+    # Source: lbs_50k_nasional_subdiv (3.4M pre-subdivided cells, max 64 vertices)
+    #
+    # Strategy: simplify heavily at low zoom so sub-pixel polygons collapse to
+    # zero area and are filtered out. Tolerance ≈ 2× pixel size at each zoom.
+    # Zoom 7 ≈ 0.01°/px, Zoom 10 ≈ 0.001°/px, Zoom 13+ ≈ full detail.
     [[providers.layers]]
-    name = "all_features"
+    name = "lbs_50k_nasional"
     geometry_fieldname = "geom"
     id_fieldname = "id"
-    geometry_type = "MultiPolygon"
+    geometry_type = "Polygon"
     sql = """
-        SELECT 
-            id,
-            name,
-            category,
-            geom_type,
-            ST_AsMVTGeom(
-                CASE 
-                    WHEN geom_type IN ('ST_Polygon', 'ST_MultiPolygon') THEN
-                        CASE 
-                            WHEN !ZOOM! < 8 THEN ST_Simplify(geom, 0.01)
-                            WHEN !ZOOM! < 12 THEN ST_Simplify(geom, 0.001)
-                            ELSE geom
-                        END
-                    WHEN geom_type IN ('ST_LineString', 'ST_MultiLineString') THEN
-                        CASE 
-                            WHEN !ZOOM! < 10 THEN ST_Simplify(geom, 0.001)
-                            ELSE geom
-                        END
+        SELECT id, src_id, wadmpr, wadmkk, q_name19, luas_polyg,
+               ST_AsBinary(sgeom) AS geom
+        FROM (
+            SELECT
+                id, src_id, wadmpr, wadmkk, q_name19, luas_polyg,
+                CASE
+                    WHEN !ZOOM! <= 7  THEN ST_Simplify(geom, 0.02)
+                    WHEN !ZOOM! = 8   THEN ST_Simplify(geom, 0.01)
+                    WHEN !ZOOM! = 9   THEN ST_Simplify(geom, 0.005)
+                    WHEN !ZOOM! = 10  THEN ST_Simplify(geom, 0.002)
+                    WHEN !ZOOM! = 11  THEN ST_Simplify(geom, 0.001)
+                    WHEN !ZOOM! = 12  THEN ST_Simplify(geom, 0.0003)
                     ELSE geom
-                END,
-                !BBOX!,
-                4096,
-                256,
-                true
-            ) AS geom
-        FROM spatial_features
-        WHERE geom && !BBOX!
-            AND ST_IsValid(geom)
+                END AS sgeom
+            FROM public.lbs_50k_nasional_subdiv
+            WHERE geom && !BBOX!
+        ) sub
+        WHERE sgeom IS NOT NULL
+          AND ST_Area(sgeom) > 0
     """
 
-# Map configuration
+    # ── Lahan Sawah Dilindungi (LSD) ──────────────────────────────────────────
+    # Source: lsd_50k_dilindungi_subdiv (1.45M pre-subdivided cells)
+    [[providers.layers]]
+    name = "lsd_50k_dilindungi"
+    geometry_fieldname = "geom"
+    id_fieldname = "id"
+    geometry_type = "Polygon"
+    sql = """
+        SELECT id, luas_ha,
+               ST_AsBinary(sgeom) AS geom
+        FROM (
+            SELECT
+                id, luas_ha,
+                CASE
+                    WHEN !ZOOM! <= 7  THEN ST_Simplify(geom, 0.02)
+                    WHEN !ZOOM! = 8   THEN ST_Simplify(geom, 0.01)
+                    WHEN !ZOOM! = 9   THEN ST_Simplify(geom, 0.005)
+                    WHEN !ZOOM! = 10  THEN ST_Simplify(geom, 0.002)
+                    WHEN !ZOOM! = 11  THEN ST_Simplify(geom, 0.001)
+                    WHEN !ZOOM! = 12  THEN ST_Simplify(geom, 0.0003)
+                    ELSE geom
+                END AS sgeom
+            FROM public.lsd_50k_dilindungi_subdiv
+            WHERE geom && !BBOX!
+        ) sub
+        WHERE sgeom IS NOT NULL
+          AND ST_Area(sgeom) > 0
+    """
+
+# ── Map: gis_map ──────────────────────────────────────────────────────────────
 [[maps]]
 name = "gis_map"
 attribution = "© GIS Web Application"
-center = [0.0, 0.0, 2.0]
-bounds = [-180.0, -85.0511, 180.0, 85.0511]
+center = [118.0, -2.5, 5.0]
+bounds = [95.0, -11.0, 141.0, 6.0]
 
-    # Add layers in rendering order (bottom to top)
     [[maps.layers]]
     provider_layer = "postgis.polygons"
     min_zoom = 0
@@ -160,4 +155,23 @@ bounds = [-180.0, -85.0511, 180.0, 85.0511]
     [[maps.layers]]
     provider_layer = "postgis.points"
     min_zoom = 0
+    max_zoom = 16
+
+# ── Map: food_monitoring (LSD + LBS only) ────────────────────────────────────
+[[maps]]
+name = "food_monitoring"
+attribution = "© BIG – Badan Informasi Geospasial"
+center = [117.0, -2.5, 5.0]
+bounds = [95.0, -11.0, 141.0, 6.0]
+
+    [[maps.layers]]
+    provider_layer = "postgis.lsd_50k_dilindungi"
+    name = "lsd_50k_dilindungi"
+    min_zoom = 7
+    max_zoom = 16
+
+    [[maps.layers]]
+    provider_layer = "postgis.lbs_50k_nasional"
+    name = "lbs_50k_nasional"
+    min_zoom = 7
     max_zoom = 16
