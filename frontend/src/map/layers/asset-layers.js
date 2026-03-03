@@ -14,7 +14,7 @@ export function addAssetLayers(map) {
         minzoom: 7,
         layout: { visibility: 'visible' },
         paint: {
-            'fill-color': '#ef4444',
+            'fill-color': '#15803d',
             'fill-opacity': [
                 'interpolate', ['linear'], ['zoom'],
                 7,  0.65,
@@ -35,7 +35,7 @@ export function addAssetLayers(map) {
         minzoom: 7,
         layout: { visibility: 'visible' },
         paint: {
-            'fill-color': '#3b82f6',
+            'fill-color': '#fbbf24',
             'fill-opacity': [
                 'interpolate', ['linear'], ['zoom'],
                 7,  0.65,
