@@ -1,0 +1,33 @@
+# Local development overrides — restores port bindings removed from base compose.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Or simply: docker compose up -d  (if this file is named docker-compose.override.yml)
+
+version: '3.8'
+
+services:
+  postgis:
+    ports:
+      - "5432:5432"
+
+  fastapi:
+    ports:
+      - "8000:8000"
+
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  tegola:
+    ports:
+      - "8080:8080"
+
+  titiler:
+    ports:
+      - "8083:80"
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
