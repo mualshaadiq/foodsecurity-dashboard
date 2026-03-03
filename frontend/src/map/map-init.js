@@ -17,9 +17,9 @@ export function getMap() {
 export function initMap(basemapTiles, basemapAttribution, onLoad) {
     map = new maplibregl.Map({
         container: 'map',
-        // Keep only ~40 tiles cached per source — enough for the viewport plus
-        // one ring of neighbouring tiles. Off-screen tiles are evicted via LRU.
-        maxTileCacheSize: 40,
+        // Let MapLibre auto-size the tile cache based on viewport (default).
+        // A fixed low value (e.g. 40) causes tiles to be evicted too aggressively
+        // during panning, resulting in blank areas.
         style: {
             version: 8,
             sources: {
@@ -40,9 +40,10 @@ export function initMap(basemapTiles, basemapAttribution, onLoad) {
                     type: 'vector',
                     tiles: [window.location.origin + '/tiles/food_monitoring/{z}/{x}/{y}.pbf'],
                     minzoom: 7,
-                    maxzoom: 16,
+                    maxzoom: 14,
                     bounds: [95.0, -11.0, 141.0, 6.0],
                     attribution: '© BIG – Badan Informasi Geospasial',
+                    promoteId: 'id',
                 },
             },
             layers: [

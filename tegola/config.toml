@@ -76,9 +76,9 @@ max_connections = 50
     # ── Lahan Baku Sawah Nasional (LBS) ───────────────────────────────────────
     # Source: lbs_50k_nasional_subdiv (3.4M pre-subdivided cells, max 64 vertices)
     #
-    # Strategy: simplify heavily at low zoom so sub-pixel polygons collapse to
-    # zero area and are filtered out. Tolerance ≈ 2× pixel size at each zoom.
-    # Zoom 7 ≈ 0.01°/px, Zoom 10 ≈ 0.001°/px, Zoom 13+ ≈ full detail.
+    # At low zoom, filter out small cells using their bounding-box area
+    # (Box2D is free since PostGIS caches it). Simplify vertex-heavy cells to
+    # keep tile sizes manageable. At zoom ≥ 13, all cells pass with full detail.
     [[providers.layers]]
     name = "lbs_50k_nasional"
     geometry_fieldname = "geom"
@@ -86,24 +86,23 @@ max_connections = 50
     geometry_type = "Polygon"
     sql = """
         SELECT id, src_id, wadmpr, wadmkk, q_name19, luas_polyg,
-               ST_AsBinary(sgeom) AS geom
-        FROM (
-            SELECT
-                id, src_id, wadmpr, wadmkk, q_name19, luas_polyg,
+            ST_AsBinary(
                 CASE
-                    WHEN !ZOOM! <= 7  THEN ST_Simplify(geom, 0.02)
-                    WHEN !ZOOM! = 8   THEN ST_Simplify(geom, 0.01)
-                    WHEN !ZOOM! = 9   THEN ST_Simplify(geom, 0.005)
-                    WHEN !ZOOM! = 10  THEN ST_Simplify(geom, 0.002)
-                    WHEN !ZOOM! = 11  THEN ST_Simplify(geom, 0.001)
-                    WHEN !ZOOM! = 12  THEN ST_Simplify(geom, 0.0003)
+                    WHEN !ZOOM! <= 8  THEN ST_Simplify(geom, 0.005)
+                    WHEN !ZOOM! <= 10 THEN ST_Simplify(geom, 0.001)
+                    WHEN !ZOOM! <= 12 THEN ST_Simplify(geom, 0.0003)
                     ELSE geom
-                END AS sgeom
-            FROM public.lbs_50k_nasional_subdiv
-            WHERE geom && !BBOX!
-        ) sub
-        WHERE sgeom IS NOT NULL
-          AND ST_Area(sgeom) > 0
+                END
+            ) AS geom
+        FROM public.lbs_50k_nasional_subdiv
+        WHERE geom && !BBOX!
+          AND (
+              (!ZOOM! >= 13)
+              OR (!ZOOM! >= 11 AND bbox_area > 0.000002)
+              OR (!ZOOM! = 10  AND bbox_area > 0.00001)
+              OR (!ZOOM! = 9   AND bbox_area > 0.00003)
+              OR (!ZOOM! >= 7  AND bbox_area > 0.0001)
+          )
     """
 
     # ── Lahan Sawah Dilindungi (LSD) ──────────────────────────────────────────
@@ -115,24 +114,23 @@ max_connections = 50
     geometry_type = "Polygon"
     sql = """
         SELECT id, luas_ha,
-               ST_AsBinary(sgeom) AS geom
-        FROM (
-            SELECT
-                id, luas_ha,
+            ST_AsBinary(
                 CASE
-                    WHEN !ZOOM! <= 7  THEN ST_Simplify(geom, 0.02)
-                    WHEN !ZOOM! = 8   THEN ST_Simplify(geom, 0.01)
-                    WHEN !ZOOM! = 9   THEN ST_Simplify(geom, 0.005)
-                    WHEN !ZOOM! = 10  THEN ST_Simplify(geom, 0.002)
-                    WHEN !ZOOM! = 11  THEN ST_Simplify(geom, 0.001)
-                    WHEN !ZOOM! = 12  THEN ST_Simplify(geom, 0.0003)
+                    WHEN !ZOOM! <= 8  THEN ST_Simplify(geom, 0.005)
+                    WHEN !ZOOM! <= 10 THEN ST_Simplify(geom, 0.001)
+                    WHEN !ZOOM! <= 12 THEN ST_Simplify(geom, 0.0003)
                     ELSE geom
-                END AS sgeom
-            FROM public.lsd_50k_dilindungi_subdiv
-            WHERE geom && !BBOX!
-        ) sub
-        WHERE sgeom IS NOT NULL
-          AND ST_Area(sgeom) > 0
+                END
+            ) AS geom
+        FROM public.lsd_50k_dilindungi_subdiv
+        WHERE geom && !BBOX!
+          AND (
+              (!ZOOM! >= 13)
+              OR (!ZOOM! >= 11 AND bbox_area > 0.000002)
+              OR (!ZOOM! = 10  AND bbox_area > 0.00001)
+              OR (!ZOOM! = 9   AND bbox_area > 0.00003)
+              OR (!ZOOM! >= 7  AND bbox_area > 0.0001)
+          )
     """
 
 # ── Map: gis_map ──────────────────────────────────────────────────────────────
@@ -168,10 +166,10 @@ bounds = [95.0, -11.0, 141.0, 6.0]
     provider_layer = "postgis.lsd_50k_dilindungi"
     name = "lsd_50k_dilindungi"
     min_zoom = 7
-    max_zoom = 16
+    max_zoom = 14
 
     [[maps.layers]]
     provider_layer = "postgis.lbs_50k_nasional"
     name = "lbs_50k_nasional"
     min_zoom = 7
-    max_zoom = 16
+    max_zoom = 14
