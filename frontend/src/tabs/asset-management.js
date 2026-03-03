@@ -8,9 +8,9 @@ import { initAoiLayer, refreshAoiLayer, setAoiLayerVisible } from '@/map/layers/
  */
 export function initAssetManagementTab(map) {
     // Vector-tile layers (Tegola)
-    _bindMultiLayerToggle(map, 'toggle-lsd', ['lsd-fill', 'lsd-outline']);
+    _bindMultiLayerToggle(map, 'toggle-lsd', ['lsd-fill']);
     // LBS has its own dedicated source-layer served from food_monitoring Tegola map
-    _bindMultiLayerToggle(map, 'toggle-lbs', ['lbs-fill', 'lbs-outline']);
+    _bindMultiLayerToggle(map, 'toggle-lbs', ['lbs-fill']);
     _bindLayerToggle(map, 'toggle-food-estate', 'asset-polygons',   'food_estate');
     _bindLayerToggle(map, 'toggle-irrigation',  'irrigation-lines', null);
 

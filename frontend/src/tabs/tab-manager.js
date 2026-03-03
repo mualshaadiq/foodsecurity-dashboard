@@ -7,7 +7,7 @@
  *  Analysis layers (AI, crop-health, disaster, yield) are now controlled
  *  exclusively by the floating Layer Panel (layer-panel.js). */
 const TAB_LAYERS = {
-    'asset-management':  ['lsd-fill', 'lsd-outline', 'lbs-fill', 'lbs-outline', 'asset-polygons', 'asset-polygons-outline', 'irrigation-lines'],
+    'asset-management':  ['lsd-fill', 'lbs-fill', 'asset-polygons', 'asset-polygons-outline', 'irrigation-lines'],
     'monitoring-setting': [],
     'summary':           [],
     'imagery':           [], // imagery layers handled separately by imagery.js

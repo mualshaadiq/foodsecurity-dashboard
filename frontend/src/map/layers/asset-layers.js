@@ -14,31 +14,14 @@ export function addAssetLayers(map) {
         minzoom: 7,
         layout: { visibility: 'visible' },
         paint: {
-            'fill-color': '#4ade80',
+            'fill-color': '#ef4444',
             'fill-opacity': [
                 'interpolate', ['linear'], ['zoom'],
                 7,  0.65,
                 12, 0.5,
                 16, 0.35,
             ],
-        },
-    });
-
-    map.addLayer({
-        id: 'lsd-outline',
-        type: 'line',
-        source: 'food-monitoring-tiles',
-        'source-layer': 'lsd_50k_dilindungi',
-        minzoom: 7,
-        layout: { visibility: 'visible' },
-        paint: {
-            'line-color': '#15803d',
-            'line-width': [
-                'interpolate', ['linear'], ['zoom'],
-                7,  0.3,
-                11, 0.8,
-                14, 1.4,
-            ],
+            'fill-outline-color': 'rgba(0,0,0,0)',
         },
     });
 
@@ -52,31 +35,14 @@ export function addAssetLayers(map) {
         minzoom: 7,
         layout: { visibility: 'visible' },
         paint: {
-            'fill-color': '#facc15',
+            'fill-color': '#3b82f6',
             'fill-opacity': [
                 'interpolate', ['linear'], ['zoom'],
                 7,  0.65,
                 12, 0.5,
                 16, 0.35,
             ],
-        },
-    });
-
-    map.addLayer({
-        id: 'lbs-outline',
-        type: 'line',
-        source: 'food-monitoring-tiles',
-        'source-layer': 'lbs_50k_nasional',
-        minzoom: 7,
-        layout: { visibility: 'visible' },
-        paint: {
-            'line-color': '#a16207',
-            'line-width': [
-                'interpolate', ['linear'], ['zoom'],
-                7,  0.3,
-                11, 0.8,
-                14, 1.4,
-            ],
+            'fill-outline-color': 'rgba(0,0,0,0)',
         },
     });
 
@@ -125,4 +91,4 @@ export function addAssetLayers(map) {
 }
 
 /** IDs of all layers managed by this module */
-export const ASSET_LAYER_IDS = ['lsd-fill', 'lsd-outline', 'lbs-fill', 'lbs-outline', 'asset-polygons', 'asset-polygons-outline', 'irrigation-lines'];
+export const ASSET_LAYER_IDS = ['lsd-fill', 'lbs-fill', 'asset-polygons', 'asset-polygons-outline', 'irrigation-lines'];
