@@ -113,7 +113,7 @@ max_connections = 50
     id_fieldname = "id"
     geometry_type = "Polygon"
     sql = """
-        SELECT id, luas_ha,
+        SELECT id, luasha,
             ST_AsBinary(
                 CASE
                     WHEN !ZOOM! <= 8  THEN ST_Simplify(geom, 0.005)
