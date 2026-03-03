@@ -13,8 +13,11 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 
   nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: foodsec-frontend
     ports:
       - "127.0.0.1:8180:80"
     volumes:
       - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend:/usr/share/nginx/html:ro
