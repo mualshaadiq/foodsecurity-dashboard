@@ -1,0 +1,33 @@
+# Production overrides for docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Key differences from dev:
+# - No external port bindings for internal services (postgis, fastapi, tegola, titiler, minio)
+# - Our nginx listens only on 127.0.0.1:8180 (HTTP); the host nginx terminates TLS
+# - Uvicorn runs without --reload
+
+version: '3.8'
+
+services:
+  postgis:
+    ports: []
+
+  fastapi:
+    ports: []
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+
+  minio:
+    ports: []
+
+  tegola:
+    ports: []
+
+  titiler:
+    ports: []
+
+  nginx:
+    ports:
+      - "127.0.0.1:8180:80"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
