@@ -23,6 +23,7 @@ import { searchSentinel2, granuleToGeoJson, getBrowseUrl, bboxFromFeature } from
 import { getAOIs } from '@/api/food-security.js';
 import { archiveScene, listArchivedScenes, deleteArchivedScene } from '@/api/scene-archive.js';
 import { updateSliderWithArchiveDates } from '@/components/time-slider.js';
+import { addDownloadTask } from '@/components/notifications.js';
 import {
     initArchivedScenesLayer,
     showArchivedScenes,
@@ -59,17 +60,24 @@ export async function initImageryTab(map) {
     // Scene preview image overlay
     initSceneImageryLayer(map);
 
-    // Show imagery on slider date change
+    // Show imagery on slider date change — only if the scene's bands are downloaded
     window.addEventListener('temporal-date-changed', (e) => {
         if (e.detail.mode !== 'imagery') return;
         const scene = _archivedScenes.find(
             (s) => s.properties?.acq_date === e.detail.date
         );
-        if (scene?.geometry) {
+        const ready = scene?.properties?.cog_status === 'complete';
+        if (ready && scene?.geometry) {
             showSceneImage(scene.preview_url, scene.geometry, 0.85, scene.visual_url || null);
         } else {
             hideSceneImage();
         }
+    });
+
+    // Refresh archived list after a download completes
+    window.addEventListener('scene-download-complete', async () => {
+        const aoiId = Number(document.getElementById('imagery-aoi-select')?.value) || null;
+        if (aoiId) await _loadArchivedScenes(aoiId);
     });
 
     // ── Cloudless mosaic controls ──────────────────────────────────────
@@ -264,14 +272,28 @@ async function _archiveGranule(index) {
 
     try {
         if (btn) { btn.disabled = true; btn.textContent = '↑'; btn.title = 'Uploading to MinIO…'; }
-        await archiveScene({
+        const saved = await archiveScene({
             stacItem:  granule,
             aoiId,
             aoiName,
             dateStart: startEl?.value,
             dateEnd:   endEl?.value,
         });
-        if (btn) { btn.textContent = '✓'; btn.classList.add('cmr-archive-btn--done'); }
+        if (btn) { btn.textContent = '\u2713'; btn.classList.add('cmr-archive-btn--done'); }
+
+        // Create a download-task notification so the user can track COG progress.
+        // totalBands = number of downloadable assets in this scene (usually 12).
+        const assets        = granule.assets ?? {};
+        const downloadable  = Object.keys(assets).filter((k) =>
+            ['B02','B03','B04','B05','B06','B07','B08','B8A','B11','B12','SCL','visual'].includes(k)
+        );
+        addDownloadTask({
+            sceneId:    saved.id,
+            sceneName:  saved.properties?.acq_date ?? aoiName,
+            aoiName,
+            totalBands: downloadable.length || 12,
+        });
+
         // refresh archived list
         await _loadArchivedScenes(aoiId);
     } catch (err) {
@@ -338,13 +360,23 @@ function _renderArchivedCard(scene) {
     const cloud  = p.cloud_cover != null ? `${Number(p.cloud_cover).toFixed(1)}%` : 'N/A';
     const plat   = (p.platform ?? 'S2').replace('sentinel-', 'S').toUpperCase();
     const range  = (p.date_start && p.date_end) ? `${p.date_start} → ${p.date_end}` : '';
-    // prefer presigned MinIO URL, fall back to original STAC thumbnail
     const thumb  = scene.preview_url || p.thumbnail || '';
-    const path   = p.object_key || '';           // e.g. sentinel-2a/2026/02/26/…-preview.jpg
+    const path   = p.object_key || '';
     const id     = scene.id;
 
+    // Lock the card until all band COGs are downloaded to MinIO.
+    const cogStatus = p.cog_status ?? 'pending';
+    const isReady   = cogStatus === 'complete';
+    const lockBadge = !isReady ? `
+        <div class="archived-scene-lock" title="Full data download in progress…">
+            ${ cogStatus === 'error'
+                ? '<span class="locked-icon">❌</span><span class="locked-text">Download failed</span>'
+                : '<span class="locked-icon">⏳</span><span class="locked-text">Downloading…</span>'
+            }
+        </div>` : '';
+
     return `
-        <div class="archived-scene-card">
+        <div class="archived-scene-card${!isReady ? ' archived-scene-card--locked' : ''}">
             ${thumb
                 ? `<img class="cmr-thumb" src="${thumb}" loading="lazy" alt="">`
                 : '<div class="cmr-thumb cmr-thumb--placeholder">🛰</div>'
@@ -357,6 +389,7 @@ function _renderArchivedCard(scene) {
                 </div>
                 ${range ? `<div class="archived-scene-range">${range}</div>` : ''}
                 ${path  ? `<div class="archived-scene-path" title="${path}">${path}</div>` : ''}
+                ${lockBadge}
             </div>
             <div class="archived-scene-actions">
                 <button class="archived-scene-zoom" data-id="${id}" title="Zoom to scene">⊕</button>

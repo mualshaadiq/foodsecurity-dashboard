@@ -17,6 +17,11 @@
         <div class="nav-menu">
             <div id="user-info" class="user-info" style="display:none;">
                 <span id="username-display"></span>
+                <!-- Notification bell -->
+                <button id="notif-bell" class="notif-bell" title="Downloads &amp; notifications" aria-label="Notifications">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
+                </button>
                 <button id="logout-btn" class="btn btn-ghost">Logout</button>
             </div>
             <div id="auth-buttons" class="auth-buttons">
@@ -24,6 +29,15 @@
             </div>
         </div>
     </nav>
+
+    <!-- ── Notification panel ─────────────────────────────────────────── -->
+    <div id="notif-panel" class="notif-panel" role="dialog" aria-label="Notifications">
+        <div class="notif-header">
+            <span class="notif-title-bar">⬇ Download Tasks</span>
+            <button id="notif-clear-btn" class="notif-clear-btn" title="Clear finished">Clear done</button>
+        </div>
+        <div id="notif-list" class="notif-list"></div>
+    </div>
 
     <!-- ── Tab Bar ────────────────────────────────────────────────────── -->
     <nav class="tab-bar">

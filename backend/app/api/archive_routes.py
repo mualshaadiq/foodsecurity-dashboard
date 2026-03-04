@@ -360,6 +360,51 @@ async def proxy_image(url: str = Query(..., description="Remote image URL to pro
     )
 
 
+@router.get("/scenes/{scene_id}")
+async def get_archived_scene(scene_id: int):
+    """
+    Return a single archived scene by id, with cog_status and download progress.
+    Used by the frontend notification poller.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, name, category, properties,
+                   ST_AsGeoJSON(geom)::text AS geom_json
+            FROM spatial_features
+            WHERE id = $1 AND category = 'archived_scene'
+            """,
+            scene_id,
+        )
+    if not row:
+        raise HTTPException(404, "Archived scene not found")
+
+    feat = _row_to_feature(row)
+    props = feat["properties"]
+
+    # Attach presigned preview URL
+    obj_key = props.get("object_key")
+    if obj_key:
+        try:
+            feat["preview_url"] = presigned_get_url(obj_key)
+        except Exception:
+            feat["preview_url"] = props.get("thumbnail", "")
+    else:
+        feat["preview_url"] = props.get("thumbnail", "")
+
+    # Band download progress
+    minio_keys = props.get("minio_band_keys") or {}
+    if isinstance(minio_keys, str):
+        minio_keys = json.loads(minio_keys)
+    feat["bands_downloaded"] = len(minio_keys)
+    feat["cog_status"]       = props.get("cog_status", "pending")
+
+    stac_urls = props.get("stac_asset_urls") or {}
+    feat["visual_url"] = minio_keys.get("visual", "") or stac_urls.get("visual", "")
+    return feat
+
+
 @router.delete("/scenes/{scene_id}", status_code=204)
 async def delete_archived_scene(scene_id: int):
     """Remove an archived scene from MinIO and PostGIS."""

@@ -50,6 +50,7 @@ import { mountSelectFields,
          initAoiSelectors,
          sfCategoryFilter }             from './components/select-fields.js';
 import { initTimeSlider }              from './components/time-slider.js';
+import { initNotifications }           from './components/notifications.js';
 
 // ── API ───────────────────────────────────────────────────────────────────
 import { exportData }                   from './api/export.js';
@@ -102,6 +103,9 @@ function boot() {
 
         // Global time slider (controls temporal tabs)
         initTimeSlider(map);
+
+        // Notification bell + download tasks
+        initNotifications();
 
         // Summary tab (async — loads charts)
         if (authManager.isAuthenticated()) initSummaryTab();

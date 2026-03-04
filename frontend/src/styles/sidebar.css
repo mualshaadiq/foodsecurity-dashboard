@@ -453,6 +453,27 @@
     opacity: .7;
 }
 
+/* Locked state — download still in progress */
+.archived-scene-card--locked {
+    opacity: .75;
+    border-color: rgba(250,204,21,.25);
+}
+.archived-scene-lock {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: rgba(250,204,21,.1);
+    border: 1px solid rgba(250,204,21,.2);
+    font-size: .65rem;
+    color: #fbbf24;
+    width: fit-content;
+}
+.locked-icon { font-size: .75rem; }
+.locked-text { font-weight: 600; }
+
 @media (max-width: 768px) {
     .sidebar {
         position: absolute;
