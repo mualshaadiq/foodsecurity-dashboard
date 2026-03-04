@@ -95,7 +95,8 @@ export async function initImageryTab(map) {
                 showSceneImage(scene.preview_url, scene.geometry, 1, scene.visual_url || null);
             }
         } else {
-            _lastScene = null;
+            // No scene on this date — hide the overlay but keep _lastScene so
+            // the toggle-scene checkbox can re-show it when switched back on.
             hideSceneImage();
         }
     });
@@ -129,6 +130,7 @@ export async function initImageryTab(map) {
     document.getElementById('imagery-aoi-select')?.addEventListener('change', (e) => {
         const id = Number(e.target.value) || null;
         hideSceneImage();   // clear stale overlay when AOI changes
+        _lastScene = null;  // clear ref so old scene can't re-appear on toggle-on
         if (id) {
             _loadArchivedScenes(id);
         } else {
