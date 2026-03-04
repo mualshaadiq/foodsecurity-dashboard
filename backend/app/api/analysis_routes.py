@@ -29,6 +29,7 @@ import numpy as np
 import rasterio
 from fastapi import APIRouter, HTTPException, Query
 from rasterio.enums import Resampling
+from rasterio.shutil import copy as rio_copy
 from rasterio.warp import reproject
 
 from app.core.storage import (
@@ -70,10 +71,26 @@ def _geom_area_ha(geom: dict) -> float:
     return w * h * (111_000 ** 2) * abs(math.cos(math.radians(lat_c))) / 10_000
 
 
+def _build_tile_url(ndvi_cog_url: str, p2: float, p98: float) -> str:
+    """Build a TiTiler tile URL with histogram-stretched rescale and nodata masking."""
+    return (
+        "/titiler/cog/tiles/WebMercatorQuad/{z}/{x}/{y}"
+        + "?url=" + urllib.parse.quote(ndvi_cog_url, safe="")
+        + f"&colormap_name=rdylgn&rescale={p2:.4f},{p98:.4f}&nodata=-9999"
+    )
+
+
 def _compute_ndvi_cog(b04_url, b08_url, aoi_id, provider, acq_date, scene_id, acq_date_iso):
     """
-    Download B04+B08 via rasterio/vsicurl, compute NDVI raster, upload COG to MinIO.
-    Returns (ndvi_tif_key, ndvi_mean, ndvi_class).
+    Download B04+B08 via rasterio/vsicurl, compute NDVI raster, upload proper COG to MinIO.
+    Returns (ndvi_tif_key, ndvi_mean, ndvi_class, ndvi_p2, ndvi_p98).
+
+    COG creation uses the two-step approach:
+      1. Write a regular tiled GeoTIFF + internal overviews to /tmp
+      2. Copy to a new COG file (copy_src_overviews=True places overviews before
+         data so TiTiler can do efficient range requests)
+    Statistics p2/p98 are returned so the tile URL can use a histogram-stretched
+    rescale for proper visual contrast.
     """
     logger.info("NDVI: opening B04 via vsicurl")
     with rasterio.open(f"/vsicurl/{b04_url}") as b04_ds:
@@ -122,6 +139,10 @@ def _compute_ndvi_cog(b04_url, b08_url, aoi_id, provider, acq_date, scene_id, ac
     valid     = ndvi[ndvi != -9999]
     ndvi_mean = float(np.nanmean(valid)) if valid.size > 0 else 0.0
     ndvi_mean = max(-1.0, min(1.0, ndvi_mean))
+    # Percentile-based rescale values for histogram stretching in TiTiler
+    ndvi_p2  = float(np.percentile(valid, 2))  if valid.size > 0 else -0.2
+    ndvi_p98 = float(np.percentile(valid, 98)) if valid.size > 0 else 0.8
+    logger.info("NDVI stats: mean=%.3f p2=%.3f p98=%.3f", ndvi_mean, ndvi_p2, ndvi_p98)
     ndvi_class = (
         "healthy"  if ndvi_mean > 0.4 else
         "moderate" if ndvi_mean > 0.2 else
@@ -131,8 +152,9 @@ def _compute_ndvi_cog(b04_url, b08_url, aoi_id, provider, acq_date, scene_id, ac
 
     processed_at_iso = datetime.now(timezone.utc).isoformat()
 
-    cog_profile = profile.copy()
-    cog_profile.update({
+    # Intermediate tiled GeoTIFF — data written here, overviews built in-place
+    base_profile = profile.copy()
+    base_profile.update({
         "driver":     "GTiff",
         "dtype":      "float32",
         "count":      1,
@@ -145,15 +167,19 @@ def _compute_ndvi_cog(b04_url, b08_url, aoi_id, provider, acq_date, scene_id, ac
         "interleave": "band",
     })
 
-    with tempfile.NamedTemporaryFile(suffix="_ndvi.tif", delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(suffix="_ndvi_tmp.tif", delete=False) as tmp:
         tmp_path = tmp.name
+    cog_path = tmp_path.replace("_ndvi_tmp.tif", "_ndvi_cog.tif")
 
     try:
-        with rasterio.open(tmp_path, "w", **cog_profile) as dst:
+        # Step 1: write data + overviews to intermediate file
+        with rasterio.open(tmp_path, "w", **base_profile) as dst:
             dst.write(ndvi, 1)
             dst.update_tags(
                 NDVI_MEAN=f"{ndvi_mean:.4f}",
                 NDVI_CLASS=ndvi_class,
+                NDVI_P2=f"{ndvi_p2:.4f}",
+                NDVI_P98=f"{ndvi_p98:.4f}",
                 ACQ_DATE=acq_date_iso,
                 PROCESSED_AT=processed_at_iso,
                 SCENE_ID=str(scene_id),
@@ -161,13 +187,25 @@ def _compute_ndvi_cog(b04_url, b08_url, aoi_id, provider, acq_date, scene_id, ac
             dst.build_overviews([2, 4, 8, 16, 32], Resampling.average)
             dst.update_tags(ns="rio_overview", resampling="average")
 
+        # Step 2: copy to proper COG — overviews come BEFORE image data in output
+        rio_copy(
+            tmp_path, cog_path,
+            driver="GTiff",
+            copy_src_overviews=True,
+            compress="deflate",
+            predictor=3,
+            tiled=True,
+            blockxsize=512,
+            blockysize=512,
+        )
+
         key    = build_object_key(aoi_id, provider, acq_date, f"scene-{scene_id}", "ndvi.tif")
         bucket = ensure_bucket()
         client = get_client()
         client.fput_object(
             bucket,
             key,
-            tmp_path,
+            cog_path,
             content_type="image/tiff",
             metadata={
                 "x-amz-meta-acq-date":     acq_date_iso,
@@ -175,19 +213,22 @@ def _compute_ndvi_cog(b04_url, b08_url, aoi_id, provider, acq_date, scene_id, ac
                 "x-amz-meta-scene-id":     str(scene_id),
                 "x-amz-meta-ndvi-mean":    f"{ndvi_mean:.4f}",
                 "x-amz-meta-ndvi-class":   ndvi_class,
+                "x-amz-meta-ndvi-p2":      f"{ndvi_p2:.4f}",
+                "x-amz-meta-ndvi-p98":     f"{ndvi_p98:.4f}",
             },
         )
         logger.info(
-            "NDVI COG uploaded -> s3://%s/%s (%.1fMB ndvi=%.3f)",
-            bucket, key, os.path.getsize(tmp_path) / 1_048_576, ndvi_mean,
+            "NDVI COG uploaded -> s3://%s/%s (%.1fMB ndvi=%.3f p2=%.3f p98=%.3f)",
+            bucket, key, os.path.getsize(cog_path) / 1_048_576, ndvi_mean, ndvi_p2, ndvi_p98,
         )
     finally:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+        for p in (tmp_path, cog_path):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
-    return key, ndvi_mean, ndvi_class
+    return key, ndvi_mean, ndvi_class, ndvi_p2, ndvi_p98
 
 
 @router.post("/run")
@@ -263,7 +304,7 @@ async def run_analysis(body: dict):
     import asyncio
     loop = asyncio.get_event_loop()
     try:
-        ndvi_tif_key, ndvi_mean, ndvi_class = await loop.run_in_executor(
+        ndvi_tif_key, ndvi_mean, ndvi_class, ndvi_p2, ndvi_p98 = await loop.run_in_executor(
             _EXECUTOR,
             _compute_ndvi_cog,
             b04_url, b08_url, aoi_id or 0, provider, acq_date, scene_id, acq_date,
@@ -278,6 +319,8 @@ async def run_analysis(body: dict):
     band_meta = json.dumps({
         "ndvi_mean":  round(ndvi_mean, 4),
         "ndvi_class": ndvi_class,
+        "ndvi_p2":    round(ndvi_p2, 4),
+        "ndvi_p98":   round(ndvi_p98, 4),
     })
 
     async with pool.acquire() as conn:
@@ -322,11 +365,7 @@ async def run_analysis(body: dict):
                 scene_id, ndvi_mean, ndvi_class, ndvi_tif_key)
 
     ndvi_cog_url  = presigned_get_url_internal(ndvi_tif_key, expires_hours=24)
-    ndvi_tile_url = (
-        "/titiler/cog/tiles/WebMercatorQuad/{z}/{x}/{y}"
-        + "?url=" + urllib.parse.quote(ndvi_cog_url, safe="")
-        + "&colormap_name=rdylgn&rescale=-1,1"
-    )
+    ndvi_tile_url = _build_tile_url(ndvi_cog_url, ndvi_p2, ndvi_p98)
 
     return {
         "id":                  result_id,
@@ -335,6 +374,8 @@ async def run_analysis(body: dict):
         "province_code":       province_code,
         "ndvi_mean":           round(ndvi_mean, 4),
         "ndvi_class":          ndvi_class,
+        "ndvi_p2":             round(ndvi_p2, 4),
+        "ndvi_p98":            round(ndvi_p98, 4),
         "estimated_area_ha":   round(estimated_area_ha, 2),
         "predicted_yield_ton": round(predicted_yield_ton, 2),
         "analyzed_at":         now.isoformat(),
@@ -353,7 +394,8 @@ async def get_ndvi_tile_url(scene_id: int):
         row = await conn.fetchrow(
             """
             SELECT ndvi_tif_key, ndvi_mean, ndvi_class,
-                   ndvi_processed_at, estimated_area_ha, predicted_yield_ton
+                   ndvi_processed_at, estimated_area_ha, predicted_yield_ton,
+                   band_metadata
               FROM sentinel_analysis_results
              WHERE scene_id = $1
              ORDER BY analyzed_at DESC
@@ -364,17 +406,21 @@ async def get_ndvi_tile_url(scene_id: int):
     if not row or not row["ndvi_tif_key"]:
         raise HTTPException(404, "No NDVI result found. Run analysis first.")
 
+    bmeta  = row["band_metadata"] or {}
+    if isinstance(bmeta, str):
+        bmeta = json.loads(bmeta)
+    p2  = float(bmeta.get("ndvi_p2",  -0.2))
+    p98 = float(bmeta.get("ndvi_p98",  0.8))
+
     ndvi_cog_url  = presigned_get_url_internal(row["ndvi_tif_key"], expires_hours=24)
-    ndvi_tile_url = (
-        "/titiler/cog/tiles/WebMercatorQuad/{z}/{x}/{y}"
-        + "?url=" + urllib.parse.quote(ndvi_cog_url, safe="")
-        + "&colormap_name=rdylgn&rescale=-1,1"
-    )
+    ndvi_tile_url = _build_tile_url(ndvi_cog_url, p2, p98)
     return {
         "scene_id":            scene_id,
         "ndvi_tile_url":       ndvi_tile_url,
         "ndvi_mean":           row["ndvi_mean"],
         "ndvi_class":          row["ndvi_class"],
+        "ndvi_p2":             p2,
+        "ndvi_p98":            p98,
         "ndvi_processed_at":   row["ndvi_processed_at"].isoformat() if row["ndvi_processed_at"] else None,
         "estimated_area_ha":   row["estimated_area_ha"],
         "predicted_yield_ton": row["predicted_yield_ton"],
