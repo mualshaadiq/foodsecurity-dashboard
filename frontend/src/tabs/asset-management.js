@@ -8,11 +8,15 @@ import { initAoiLayer, refreshAoiLayer, setAoiLayerVisible } from '@/map/layers/
  */
 export function initAssetManagementTab(map) {
     // Vector-tile layers (Tegola)
-    _bindMultiLayerToggle(map, 'toggle-lsd', ['lsd-fill']);
-    // LBS has its own dedicated source-layer served from food_monitoring Tegola map
-    _bindMultiLayerToggle(map, 'toggle-lbs', ['lbs-fill']);
-    _bindLayerToggle(map, 'toggle-food-estate', 'asset-polygons',   'food_estate');
-    _bindLayerToggle(map, 'toggle-irrigation',  'irrigation-lines', null);
+    _bindMultiLayerToggle(map, 'toggle-lsd',          ['lsd-fill']);
+    _bindMultiLayerToggle(map, 'toggle-lbs',          ['lbs-fill']);
+    _bindMultiLayerToggle(map, 'toggle-food-estate',  ['asset-polygons', 'asset-polygons-outline']);
+    _bindMultiLayerToggle(map, 'toggle-irrigation',   ['irrigation-lines']);
+
+    // Sync every layer to its checkbox's default state immediately.
+    // This keeps the layers visible (or hidden) when the user switches tabs,
+    // since the tab-manager no longer resets asset layers on tab changes.
+    _initLayerVisibility(map);
 
     // AoI is served from a local GeoJSON source (not Tegola) so use a dedicated toggle.
     // initAoiLayer already calls refreshAoiLayer() internally and starts visible.
@@ -44,6 +48,28 @@ export function initAssetManagementTab(map) {
     window.addEventListener('auth-changed', () => loadAoiList());
 }
 
+/**
+ * Apply each checkbox's initial state to its corresponding map layer(s).
+ * Called once at startup so the user's defaults take effect before any
+ * tab switch would otherwise hide/show layers.
+ */
+function _initLayerVisibility(map) {
+    const pairs = [
+        ['toggle-lsd',          ['lsd-fill']],
+        ['toggle-lbs',          ['lbs-fill']],
+        ['toggle-food-estate',  ['asset-polygons', 'asset-polygons-outline']],
+        ['toggle-irrigation',   ['irrigation-lines']],
+    ];
+    pairs.forEach(([cbId, layerIds]) => {
+        const el = document.getElementById(cbId);
+        if (!el) return;
+        const vis = el.checked ? 'visible' : 'none';
+        layerIds.forEach((id) => {
+            if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+        });
+    });
+}
+
 function _bindAoiToggle() {
     const el = document.getElementById('toggle-aoi');
     if (!el) return;
@@ -52,26 +78,6 @@ function _bindAoiToggle() {
         if (el.checked) {
             await refreshAoiLayer();
         }
-    });
-}
-
-/**
- * Toggle a single Tegola-backed layer (optionally scoped to a category).
- */
-function _bindLayerToggle(map, checkboxId, layerId, filterCategory) {
-    const el = document.getElementById(checkboxId);
-    if (!el) return;
-
-    el.addEventListener('change', () => {
-        if (!map.getLayer(layerId)) return;
-
-        if (filterCategory) {
-            // Layer is shared; for now simply toggle overall visibility
-            // (individual category filters can be added later).
-        }
-
-        const vis = el.checked ? 'visible' : 'none';
-        map.setLayoutProperty(layerId, 'visibility', vis);
     });
 }
 

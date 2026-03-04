@@ -98,25 +98,27 @@ export function initTimeSlider(map) {
     });
 
     window.addEventListener('temporal-tab-changed', (e) => {
-        const { tabId, isTemporal } = e.detail;
+        const { tabId } = e.detail;
+        // Slider is always visible (global).
+        // Switch to imagery mode on the imagery tab; temporal mode everywhere else.
         if (tabId === 'imagery') {
-            _mode = 'imagery';
-            _bar.classList.add('visible');
-            _bar.dataset.mode = 'imagery';
-            _rebuildSlider();
-            _stopPlay();
-        } else if (isTemporal) {
-            _mode = 'temporal';
-            _bar.dataset.mode = 'temporal';
-            _bar.classList.add('visible');
-            _dates = _generateMockDates();
-            _idx   = _dates.length - 1;
-            _rebuildSlider();
-            _stopPlay();
+            if (_mode !== 'imagery') {
+                _mode = 'imagery';
+                _bar.dataset.mode = 'imagery';
+                _rebuildSlider();
+                _stopPlay();
+            }
         } else {
-            _bar.classList.remove('visible');
-            _stopPlay();
+            if (_mode !== 'temporal') {
+                _mode = 'temporal';
+                _dates = _generateMockDates();
+                _idx   = _dates.length - 1;
+                _rebuildSlider();
+                _stopPlay();
+            }
+            _bar.dataset.mode = 'temporal';
         }
+        _bar.classList.add('visible');
     });
 }
 
@@ -155,7 +157,12 @@ export function updateSliderWithArchiveDates(scenes) {
     _dates = sorted.length ? [...sorted, _nextRunDate] : [_today(), _nextRunDate];
     _idx   = Math.max(0, _dates.length - 2); // select latest archived, not next-run
 
-    if (_mode === 'imagery') _rebuildSlider();
+    if (_mode === 'imagery') {
+        _rebuildSlider();
+        // Fire the date-changed event so imagery.js immediately renders the
+        // selected scene without the user having to nudge the slider.
+        _applyDate();
+    }
 }
 
 // ── Private ───────────────────────────────────────────────────────────────

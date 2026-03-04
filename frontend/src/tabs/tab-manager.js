@@ -4,10 +4,13 @@
  */
 
 /** Map of tab ID → array of MapLibre layer IDs to show when that tab is active.
+ *  Asset-management layers are intentionally OMITTED here — their visibility
+ *  is controlled exclusively by the toggle checkboxes in asset-management.js
+ *  so they persist across tab changes.
  *  Analysis layers (AI, crop-health, disaster, yield) are also controlled
  *  by the floating Layer Panel (layer-panel.js). */
 const TAB_LAYERS = {
-    'asset-management':  ['lsd-fill', 'lbs-fill', 'asset-polygons', 'asset-polygons-outline', 'irrigation-lines'],
+    'asset-management':  [],  // layers managed by checkbox toggles — not reset here
     'monitoring-setting': [],
     'summary':           [],
     'imagery':           [], // imagery layers handled separately by imagery.js
@@ -20,8 +23,8 @@ const TAB_LAYERS = {
 /** All food-security layer IDs managed by tab visibility (hidden by default) */
 const ALL_FS_LAYERS = Object.values(TAB_LAYERS).flat();
 
-/** Tabs that show temporal data and should display the time slider */
-const TEMPORAL_TABS = new Set(['imagery']);
+/** All tabs show the time slider (global). */
+const TEMPORAL_TABS = new Set(Object.keys(TAB_LAYERS));
 
 export class TabManager {
     /**
