@@ -28,8 +28,9 @@ from app.db.connection import get_pool
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# TiTiler container – reachable on the internal Docker network
-TITILER_URL = "http://titiler:8000"
+# TiTiler container – reachable on the internal Docker network.
+# The developmentseed/titiler image exposes port 80 (not 8000).
+TITILER_URL = "http://titiler:80"
 
 # Constant: rough rice yield factor (ton/ha at NDVI=1.0)
 RICE_YIELD_FACTOR = 4.5
