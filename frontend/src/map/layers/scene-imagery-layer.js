@@ -52,7 +52,7 @@ export function initSceneImageryLayer(map) {
  * @param {number}   [opacity]   0–1 (default 0.85)
  * @param {string}   [visualUrl] STAC visual COG URL — enables TiTiler tiles
  */
-export function showSceneImage(previewUrl, geometry, opacity = 0.85, visualUrl = null) {
+export function showSceneImage(previewUrl, geometry, opacity = 1, visualUrl = null) {
     if (!_map || !geometry) return;
 
     _removeImageLayer();

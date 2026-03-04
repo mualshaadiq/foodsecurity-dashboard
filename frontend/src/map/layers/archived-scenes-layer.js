@@ -32,18 +32,7 @@ export function initArchivedScenesLayer(map) {
         data: _emptyCollection(),
     });
 
-    // Fill — soft blue tint
-    map.addLayer({
-        id:     'archived-scenes-fill',
-        type:   'fill',
-        source: SOURCE_ID,
-        paint: {
-            'fill-color':   '#3b82f6',
-            'fill-opacity': 0.12,
-        },
-    });
-
-    // Border
+    // Border (outline only — no fill)
     map.addLayer({
         id:     'archived-scenes-line',
         type:   'line',

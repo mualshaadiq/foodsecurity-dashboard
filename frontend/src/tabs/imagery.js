@@ -68,7 +68,7 @@ export async function initImageryTab(map) {
         );
         const ready = scene?.properties?.cog_status === 'complete';
         if (ready && scene?.geometry) {
-            showSceneImage(scene.preview_url, scene.geometry, 0.85, scene.visual_url || null);
+            showSceneImage(scene.preview_url, scene.geometry, 1, scene.visual_url || null);
         } else {
             hideSceneImage();
         }
