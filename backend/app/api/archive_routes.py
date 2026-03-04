@@ -194,7 +194,7 @@ async def _download_bands_to_minio(
             SET properties = properties
                 || jsonb_build_object(
                        'minio_band_keys',  $2::jsonb,
-                       'cog_status',       $3,
+                       'cog_status',       $3::text,
                        'bytes_downloaded', $4::bigint
                    )
             WHERE id = $1
