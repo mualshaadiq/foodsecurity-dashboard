@@ -20,9 +20,9 @@ import {
     clearGranuleFootprint,
 } from '@/map/layers/cmr-footprint-layer.js';
 import { searchSentinel2, granuleToGeoJson, getBrowseUrl, bboxFromFeature } from '@/api/cmr.js';
-import { getAOIs } from '@/api/food-security.js';
+import { getAOIs, getAnalysisResults } from '@/api/food-security.js';
 import { archiveScene, listArchivedScenes, deleteArchivedScene } from '@/api/scene-archive.js';
-import { updateSliderWithArchiveDates } from '@/components/time-slider.js';
+import { updateSliderWithAoiData, resetSliderToTemporal } from '@/components/time-slider.js';
 import { addDownloadTask } from '@/components/notifications.js';
 import {
     initArchivedScenesLayer,
@@ -60,12 +60,16 @@ export async function initImageryTab(map) {
     // Scene preview image overlay
     initSceneImageryLayer(map);
 
-    // Show imagery on slider date change — only if the scene's bands are downloaded
+    // Show imagery on slider date change — imagery mode OR global data mode
     window.addEventListener('temporal-date-changed', (e) => {
-        if (e.detail.mode !== 'imagery') return;
-        const scene = _archivedScenes.find(
-            (s) => s.properties?.acq_date === e.detail.date
-        );
+        if (e.detail.mode !== 'imagery' && e.detail.mode !== 'data') return;
+
+        // In 'data' mode the scene is passed directly in the event payload;
+        // in legacy 'imagery' mode look it up by date.
+        const scene = e.detail.mode === 'data'
+            ? e.detail.scene
+            : _archivedScenes.find((s) => s.properties?.acq_date === e.detail.date);
+
         const ready = scene?.properties?.cog_status === 'complete';
         if (ready && scene?.geometry) {
             showSceneImage(scene.preview_url, scene.geometry, 1, scene.visual_url || null);
@@ -76,6 +80,12 @@ export async function initImageryTab(map) {
 
     // Refresh archived list after a download completes
     window.addEventListener('scene-download-complete', async () => {
+        const aoiId = Number(document.getElementById('imagery-aoi-select')?.value) || null;
+        if (aoiId) await _loadArchivedScenes(aoiId);
+    });
+
+    // Refresh slider after a new NDVI analysis completes (from any tab)
+    window.addEventListener('analysis-complete', async (e) => {
         const aoiId = Number(document.getElementById('imagery-aoi-select')?.value) || null;
         if (aoiId) await _loadArchivedScenes(aoiId);
     });
@@ -97,7 +107,15 @@ export async function initImageryTab(map) {
     document.getElementById('imagery-aoi-select')?.addEventListener('change', (e) => {
         const id = Number(e.target.value) || null;
         hideSceneImage();   // clear stale overlay when AOI changes
-        _loadArchivedScenes(id);
+        if (id) {
+            _loadArchivedScenes(id);
+        } else {
+            // AOI cleared — drop back to temporal mock slider
+            _archivedScenes = [];
+            showArchivedScenes([]);
+            resetSliderToTemporal();
+            document.getElementById('archived-scenes-list')?.replaceChildren();
+        }
     });
 
     const cloudSlider  = document.getElementById('imagery-cloud-cover');
@@ -310,7 +328,14 @@ async function _loadArchivedScenes(aoiId) {
     try {
         _archivedScenes = await listArchivedScenes(aoiId ?? null);
         showArchivedScenes(_archivedScenes);
-        updateSliderWithArchiveDates(_archivedScenes);
+
+        // Fetch analysis results for this AOI to populate the global data slider.
+        // Gracefully degrade if analyses aren't available yet.
+        let analyses = [];
+        if (aoiId) {
+            try { analyses = await getAnalysisResults(aoiId); } catch (_) {}
+        }
+        updateSliderWithAoiData(_archivedScenes, analyses);
 
         // Notify Crop Health tab so it can refresh its scene selector
         window.dispatchEvent(new CustomEvent('archived-scenes-updated', {

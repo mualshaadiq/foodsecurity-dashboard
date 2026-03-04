@@ -429,39 +429,75 @@ async def get_ndvi_tile_url(scene_id: int):
 
 @router.get("/results")
 async def list_results(aoi_id: Optional[int] = Query(None)):
-    """List analysis results, optionally filtered by aoi_id."""
+    """
+    List analysis results, optionally filtered by aoi_id.
+    Each row is enriched with:
+      - acq_date  — from the parent archived-scene spatial_feature
+      - ndvi_tile_url — fresh TiTiler tile URL (presigned, 24h validity)
+    """
     pool = get_pool()
     async with pool.acquire() as conn:
         if aoi_id is not None:
             rows = await conn.fetch(
                 """
-                SELECT id, scene_id, aoi_id, province_code, ndvi_mean,
-                       estimated_area_ha, predicted_yield_ton, cloud_cover,
-                       analyzed_at, ndvi_tif_key, ndvi_processed_at
-                  FROM sentinel_analysis_results
-                 WHERE aoi_id = $1
-                 ORDER BY analyzed_at DESC
+                SELECT r.id, r.scene_id, r.aoi_id, r.province_code, r.ndvi_mean,
+                       r.estimated_area_ha, r.predicted_yield_ton, r.cloud_cover,
+                       r.analyzed_at, r.ndvi_tif_key, r.ndvi_processed_at,
+                       r.band_metadata,
+                       (sf.properties->>'acq_date') AS acq_date
+                  FROM sentinel_analysis_results r
+                  LEFT JOIN spatial_features sf ON sf.id = r.scene_id
+                 WHERE r.aoi_id = $1
+                 ORDER BY r.analyzed_at DESC
                 """,
                 aoi_id,
             )
         else:
             rows = await conn.fetch(
                 """
-                SELECT id, scene_id, aoi_id, province_code, ndvi_mean,
-                       estimated_area_ha, predicted_yield_ton, cloud_cover,
-                       analyzed_at, ndvi_tif_key, ndvi_processed_at
-                  FROM sentinel_analysis_results
-                 ORDER BY analyzed_at DESC
+                SELECT r.id, r.scene_id, r.aoi_id, r.province_code, r.ndvi_mean,
+                       r.estimated_area_ha, r.predicted_yield_ton, r.cloud_cover,
+                       r.analyzed_at, r.ndvi_tif_key, r.ndvi_processed_at,
+                       r.band_metadata,
+                       (sf.properties->>'acq_date') AS acq_date
+                  FROM sentinel_analysis_results r
+                  LEFT JOIN spatial_features sf ON sf.id = r.scene_id
+                 ORDER BY r.analyzed_at DESC
                 """
             )
-    return [
-        {
-            **dict(r),
-            "analyzed_at":       r["analyzed_at"].isoformat()       if r["analyzed_at"]       else None,
-            "ndvi_processed_at": r["ndvi_processed_at"].isoformat() if r["ndvi_processed_at"] else None,
-        }
-        for r in rows
-    ]
+
+    results = []
+    for r in rows:
+        bmeta = r["band_metadata"] or {}
+        if isinstance(bmeta, str):
+            bmeta = json.loads(bmeta)
+
+        ndvi_tile_url = None
+        if r["ndvi_tif_key"]:
+            try:
+                ndvi_cog_url  = presigned_get_url_internal(r["ndvi_tif_key"], expires_hours=24)
+                p2            = float(bmeta.get("ndvi_p2",  -0.2))
+                p98           = float(bmeta.get("ndvi_p98",  0.8))
+                ndvi_tile_url = _build_tile_url(ndvi_cog_url, p2, p98)
+            except Exception:
+                pass
+
+        results.append({
+            "id":                  r["id"],
+            "scene_id":            r["scene_id"],
+            "aoi_id":              r["aoi_id"],
+            "province_code":       r["province_code"],
+            "ndvi_mean":           r["ndvi_mean"],
+            "ndvi_class":          bmeta.get("ndvi_class"),
+            "estimated_area_ha":   r["estimated_area_ha"],
+            "predicted_yield_ton": r["predicted_yield_ton"],
+            "cloud_cover":         r["cloud_cover"],
+            "analyzed_at":         r["analyzed_at"].isoformat()       if r["analyzed_at"]       else None,
+            "ndvi_processed_at":   r["ndvi_processed_at"].isoformat() if r["ndvi_processed_at"] else None,
+            "acq_date":            r["acq_date"],
+            "ndvi_tile_url":       ndvi_tile_url,
+        })
+    return results
 
 
 @router.get("/latest-scene/{aoi_id}")

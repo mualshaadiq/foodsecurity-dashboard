@@ -2,15 +2,19 @@
  * time-slider.js — global temporal date slider pinned to the map bottom.
  *
  * Modes:
- *   'temporal' — mock 8-day revisit dates; used by ai/crop-health/etc tabs
+ *   'temporal' — mock 8-day revisit dates; default before any AOI is selected
  *   'imagery'  — real archived scene dates fed by imagery.js;
  *                shows ● archived markers and ▶ next-run projection
+ *   'data'     — AOI-aware mode (scenes + analysis results);
+ *                ticks are coloured by available data types.
+ *                Active whenever updateSliderWithAoiData() has been called.
  *
  * Public API:
  *   initTimeSlider(map)
  *   getCurrentTemporalDate() → string
- *   updateSliderWithArchiveDates(scenes)  ← called by imagery.js
- *   resetSliderToTemporal()               ← called when leaving imagery tab
+ *   updateSliderWithArchiveDates(scenes)     ← legacy; use updateSliderWithAoiData
+ *   updateSliderWithAoiData(scenes, analyses)← imagery.js calls after AOI load
+ *   resetSliderToTemporal()                  ← called when AOI is cleared
  */
 
 const TEMPORAL_TABS = new Set(['ai', 'crop-health', 'disaster-risk', 'yield-prediction']);
@@ -21,9 +25,13 @@ let _map         = null;
 let _dates       = [];        // all date strings YYYY-MM-DD on the slider
 let _idx         = 0;
 let _timer       = null;
-let _mode        = 'temporal';           // 'temporal' | 'imagery'
-let _archiveDates = new Set();           // acquisition dates that exist in archive
-let _nextRunDate  = null;                // projected next acquisition
+let _mode        = 'temporal';           // 'temporal' | 'imagery' | 'data'
+let _archiveDates = new Set();           // acquisition dates in archive (imagery mode)
+let _nextRunDate  = null;                // projected next acquisition (imagery mode)
+
+// ── Per-date data maps (populated in 'data' mode) ─────────────────────────
+let _sceneByDate    = new Map();   // date → archived-scene GeoJSON Feature
+let _analysisByDate = new Map();   // date → analysis result object (has ndvi_tile_url)
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -99,7 +107,16 @@ export function initTimeSlider(map) {
 
     window.addEventListener('temporal-tab-changed', (e) => {
         const { tabId } = e.detail;
-        // Slider is always visible (global).
+        _bar.classList.add('visible');
+
+        // When AOI data is loaded, keep the data slider on ALL tabs so every
+        // layer can respond to the same timeline.
+        if (_mode === 'data') {
+            _bar.dataset.mode = 'data';
+            _applyDate();
+            return;
+        }
+
         // Switch to imagery mode on the imagery tab; temporal mode everywhere else.
         if (tabId === 'imagery') {
             if (_mode !== 'imagery') {
@@ -118,7 +135,6 @@ export function initTimeSlider(map) {
             }
             _bar.dataset.mode = 'temporal';
         }
-        _bar.classList.add('visible');
     });
 }
 
@@ -165,14 +181,66 @@ export function updateSliderWithArchiveDates(scenes) {
     }
 }
 
-// ── Private ───────────────────────────────────────────────────────────────
+/**
+ * Feed real archived scene dates + analysis results into the slider.
+ * Sets mode='data' and keeps that mode across all tab changes until
+ * resetSliderToTemporal() is called (AOI deselected).
+ *
+ * Ticks are colour-coded:
+ *   green  (ts-tick--scene)    — has archived imagery for this date
+ *   orange (ts-tick--analysis) — has NDVI analysis result for this date
+ *   split  (ts-tick--both)     — has both
+ *
+ * @param {object[]} scenes   GeoJSON Features from /api/archive/scenes?aoi_id=
+ * @param {object[]} analyses Results from /api/analysis/results?aoi_id=
+ */
+export function updateSliderWithAoiData(scenes, analyses) {
+    _sceneByDate    = new Map();
+    _analysisByDate = new Map();
+
+    for (const s of scenes) {
+        const d = s.properties?.acq_date;
+        if (d) _sceneByDate.set(d, s);
+    }
+    for (const a of analyses) {
+        if (a.acq_date) _analysisByDate.set(a.acq_date, a);
+    }
+
+    const allDates = [
+        ..._sceneByDate.keys(),
+        ..._analysisByDate.keys(),
+    ];
+    const sorted = [...new Set(allDates)].sort();
+
+    _dates        = sorted.length ? sorted : [_today()];
+    _idx          = _dates.length - 1;   // start at latest date
+    _archiveDates = new Set(_sceneByDate.keys());
+    _mode         = 'data';
+
+    if (_bar) _bar.dataset.mode = 'data';
+    _rebuildSlider();
+    _applyDate();
+}
+
+/**
+ * Drop back to mock-temporal mode (called when AOI is deselected).
+ */
+export function resetSliderToTemporal() {
+    _sceneByDate    = new Map();
+    _analysisByDate = new Map();
+    _mode           = 'temporal';
+    _dates          = _generateMockDates();
+    _idx            = _dates.length - 1;
+    if (_bar) _bar.dataset.mode = 'temporal';
+    _rebuildSlider();
+}
 
 function _rebuildSlider() {
     if (!_slider) return;
 
-    if (_mode === 'imagery' && _dates.length === 0) {
+    if ((_mode === 'imagery' || _mode === 'data') && _dates.length === 0) {
         _slider.min = 0; _slider.max = 0; _slider.value = 0;
-        if (_label) _label.textContent = 'No archive data';
+        if (_label) _label.textContent = 'No data';
         _renderTicks();
         return;
     }
@@ -192,15 +260,37 @@ function _renderTicks() {
 
     const total = _dates.length - 1 || 1;
     const html  = _dates.map((d, i) => {
-        const pct     = (i / total) * 100;
-        const isNext  = (_mode === 'imagery' && d === _nextRunDate);
-        const isArch  = (_mode === 'imagery' && _archiveDates.has(d));
-        const cls     = isNext  ? 'ts-tick ts-tick--next'
-                      : isArch  ? 'ts-tick ts-tick--archived'
-                      :           'ts-tick ts-tick--default';
-        const tip     = isNext  ? `Next run (projected): ${d}`
-                      : isArch  ? `Archived: ${d}`
-                      :           d;
+        const pct = (i / total) * 100;
+        let cls, tip;
+
+        if (_mode === 'data') {
+            // Colour ticks by available data type
+            const hasScene    = _sceneByDate.has(d);
+            const hasAnalysis = _analysisByDate.has(d);
+            if (hasScene && hasAnalysis) {
+                cls = 'ts-tick ts-tick--both';
+                tip = `Imagery + NDVI analysis: ${d}`;
+            } else if (hasScene) {
+                cls = 'ts-tick ts-tick--scene';
+                tip = `Archived imagery: ${d}`;
+            } else if (hasAnalysis) {
+                cls = 'ts-tick ts-tick--analysis';
+                tip = `NDVI analysis: ${d}`;
+            } else {
+                cls = 'ts-tick ts-tick--default';
+                tip = d;
+            }
+        } else {
+            const isNext = (_mode === 'imagery' && d === _nextRunDate);
+            const isArch = (_mode === 'imagery' && _archiveDates.has(d));
+            cls = isNext  ? 'ts-tick ts-tick--next'
+                : isArch  ? 'ts-tick ts-tick--archived'
+                :           'ts-tick ts-tick--default';
+            tip = isNext  ? `Next run (projected): ${d}`
+                : isArch  ? `Archived: ${d}`
+                :           d;
+        }
+
         return `<span class="${cls}" style="left:${pct}%" title="${tip}" data-idx="${i}"></span>`;
     }).join('');
 
@@ -240,7 +330,14 @@ function _applyDate(fireEvents = true) {
         if (src) src.setTiles([`/tiles/gis_map/{z}/{x}/{y}?date=${date}`]);
     }
 
-    window.dispatchEvent(new CustomEvent('temporal-date-changed', { detail: { date, mode: _mode } }));
+    // In 'data' mode, include the per-date scene + analysis objects so that
+    // imagery.js and crop-health.js can show/hide layers without extra fetches.
+    const detail = { date, mode: _mode };
+    if (_mode === 'data') {
+        detail.scene    = _sceneByDate.get(date)    ?? null;
+        detail.analysis = _analysisByDate.get(date) ?? null;
+    }
+    window.dispatchEvent(new CustomEvent('temporal-date-changed', { detail }));
 }
 
 function _stopPlay() {

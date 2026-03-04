@@ -88,6 +88,63 @@
 .ts-tick--archived.ts-tick--active { background: var(--accent); }
 .ts-tick--next.ts-tick--active     { background: #2563eb; }
 
+/* ─── Data-mode tick types ────────────────────────────────────────────── */
+
+/* Has archived scene (imagery) — green */
+.ts-tick--scene {
+    background: #22c55e;
+    width: 3px;
+    height: 10px;
+}
+.ts-tick--scene.ts-tick--active { background: #16a34a; }
+
+/* Has NDVI analysis result — orange */
+.ts-tick--analysis {
+    background: #f97316;
+    width: 3px;
+    height: 10px;
+}
+.ts-tick--analysis.ts-tick--active { background: #ea580c; }
+
+/* Has both imagery + NDVI — split green/orange */
+.ts-tick--both {
+    background: linear-gradient(to bottom, #22c55e 50%, #f97316 50%);
+    width: 4px;
+    height: 12px;
+    border-radius: 1px;
+}
+.ts-tick--both.ts-tick--active { height: 16px !important; }
+
+/* Data-mode bar label prefix */
+#time-slider-bar[data-mode="data"] #time-date-label::before {
+    content: '📅 ';
+    font-size: .85em;
+}
+
+/* Legend row shown inside the slider bar when in data mode */
+#ts-data-legend {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: .03em;
+    white-space: nowrap;
+}
+#time-slider-bar[data-mode="data"] #ts-data-legend { display: flex; }
+
+.ts-legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+.ts-legend-dot--scene    { background: #22c55e; }
+.ts-legend-dot--analysis { background: #f97316; }
+.ts-legend-dot--both     { background: linear-gradient(to bottom, #22c55e 50%, #f97316 50%); }
+
 /* Label modifier when showing next-run date */
 .ts-label--next {
     color: #3b82f6 !important;

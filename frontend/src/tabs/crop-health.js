@@ -19,7 +19,33 @@ export function initCropHealthTab(map) {
     _bindNdviRunButton(map);
 
     window.addEventListener('temporal-date-changed', (e) => {
-        console.debug('[crop-health] temporal date changed ->', e.detail.date);
+        if (e.detail.mode !== 'data') return;
+
+        const toggle = document.getElementById('toggle-ndvi');
+        const { scene, analysis } = e.detail;
+
+        if (toggle?.checked && analysis?.ndvi_tile_url) {
+            // Show the NDVI raster for this date's analysis result.
+            // Use the scene geometry from the event payload for the bbox hint.
+            showNdviLayer(analysis.ndvi_tile_url, scene?.geometry ?? null);
+        } else if (analysis && !analysis.ndvi_tile_url) {
+            // Analysis exists but no COG yet (still processing) — hide stale layer.
+            hideNdviLayer();
+        } else if (!analysis) {
+            // No analysis on this date — hide the NDVI layer.
+            hideNdviLayer();
+        }
+    });
+
+    // Keep the scene selector in sync with the global AOI slider \u2014 when the
+    // slider moves and the new date has a scene, pre-select it in the dropdown.
+    window.addEventListener('temporal-date-changed', (e) => {
+        if (e.detail.mode !== 'data') return;
+        const sceneEl = document.getElementById('ndvi-scene-select');
+        if (!sceneEl || !e.detail.scene) return;
+        const sceneId = String(e.detail.scene.id ?? '');
+        if (sceneEl.value !== sceneId) sceneEl.value = sceneId;
+        _lastScene = e.detail.scene;
     });
 }
 
@@ -104,6 +130,11 @@ function _bindNdviRunButton(map) {
                 const toggle = document.getElementById('toggle-ndvi');
                 if (toggle) toggle.checked = true;
             }
+
+            // Notify the global slider so it gains the new NDVI tick
+            window.dispatchEvent(new CustomEvent('analysis-complete', {
+                detail: { aoi_id: result.aoi_id, scene_id: result.scene_id, acq_date: result.acq_date },
+            }));
 
             if (statusEl) {
                 const procAt = result.ndvi_processed_at
