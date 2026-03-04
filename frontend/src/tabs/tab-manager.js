@@ -4,13 +4,17 @@
  */
 
 /** Map of tab ID → array of MapLibre layer IDs to show when that tab is active.
- *  Analysis layers (AI, crop-health, disaster, yield) are now controlled
- *  exclusively by the floating Layer Panel (layer-panel.js). */
+ *  Analysis layers (AI, crop-health, disaster, yield) are also controlled
+ *  by the floating Layer Panel (layer-panel.js). */
 const TAB_LAYERS = {
     'asset-management':  ['lsd-fill', 'lbs-fill', 'asset-polygons', 'asset-polygons-outline', 'irrigation-lines'],
     'monitoring-setting': [],
     'summary':           [],
     'imagery':           [], // imagery layers handled separately by imagery.js
+    'ai':                ['farm-boundary', 'farm-boundary-outline', 'crop-classification'],
+    'crop-health':       ['ndvi-zones', 'fertilizer-zones'],
+    'disaster-risk':     ['flood-risk', 'drought-zones'],
+    'yield-prediction':  ['yield-zones', 'yield-zones-outline'],
 };
 
 /** All food-security layer IDs managed by tab visibility (hidden by default) */

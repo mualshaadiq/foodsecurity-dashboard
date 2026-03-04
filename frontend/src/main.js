@@ -36,6 +36,10 @@ import { initAssetManagementTab }       from './tabs/asset-management.js';
 import { initMonitoringSettingTab }     from './tabs/monitoring-setting.js';
 import { initSummaryTab }               from './tabs/summary.js';
 import { initImageryTab }               from './tabs/imagery.js';
+import { initAITab }                    from './tabs/ai.js';
+import { initCropHealthTab }            from './tabs/crop-health.js';
+import { initDisasterRiskTab }          from './tabs/disaster-risk.js';
+import { initYieldPredictionTab }       from './tabs/yield-prediction.js';
 
 // ── Components ────────────────────────────────────────────────────────────
 import { initLayerPanel }               from './components/layer-panel.js';
@@ -83,6 +87,12 @@ function boot() {
         // Tab-specific controls
         initAssetManagementTab(map);
         initMonitoringSettingTab(map);
+
+        // Analysis tabs
+        initAITab(map);
+        initCropHealthTab(map);
+        initDisasterRiskTab(map);
+        initYieldPredictionTab(map);
 
         // Imagery tab (Sentinel-2 + future Planet)
         initImageryTab(map);

@@ -73,8 +73,85 @@ max_connections = 50
           AND ST_IsValid(geom)
     """
 
+    # ── AI Analysis boundaries (farm_boundary + crop_classification) ──────────
+    [[providers.layers]]
+    name = "ai_boundaries"
+    geometry_fieldname = "geom"
+    id_fieldname = "id"
+    geometry_type = "MultiPolygon"
+    sql = """
+        SELECT
+            id, name, category, geom_type,
+            properties->>'category' AS feature_category,
+            properties->>'crop_type' AS crop_type,
+            ST_AsBinary(geom) AS geom
+        FROM spatial_features
+        WHERE geom_type IN ('ST_Polygon', 'ST_MultiPolygon')
+          AND category IN ('farm_boundary', 'crop_classification', 'ai_boundary')
+          AND geom && !BBOX!
+          AND ST_IsValid(geom)
+    """
+
+    # ── Crop Health zones (ndvi_zone + fertilizer_zone) ───────────────────────
+    [[providers.layers]]
+    name = "crop_health"
+    geometry_fieldname = "geom"
+    id_fieldname = "id"
+    geometry_type = "MultiPolygon"
+    sql = """
+        SELECT
+            id, name, category, geom_type,
+            properties->>'category'   AS feature_category,
+            properties->>'ndvi_class' AS ndvi_class,
+            properties->>'zone_level' AS zone_level,
+            (properties->>'ndvi_mean')::float AS ndvi_mean,
+            ST_AsBinary(geom) AS geom
+        FROM spatial_features
+        WHERE geom_type IN ('ST_Polygon', 'ST_MultiPolygon')
+          AND category IN ('ndvi_zone', 'fertilizer_zone', 'crop_health')
+          AND geom && !BBOX!
+          AND ST_IsValid(geom)
+    """
+
+    # ── Disaster Risk zones (flood_risk + drought_zone) ───────────────────────
+    [[providers.layers]]
+    name = "disaster_risk"
+    geometry_fieldname = "geom"
+    id_fieldname = "id"
+    geometry_type = "MultiPolygon"
+    sql = """
+        SELECT
+            id, name, category, geom_type,
+            properties->>'category'    AS feature_category,
+            properties->>'risk_level'  AS risk_level,
+            (properties->>'drought_index')::float AS drought_index,
+            ST_AsBinary(geom) AS geom
+        FROM spatial_features
+        WHERE geom_type IN ('ST_Polygon', 'ST_MultiPolygon')
+          AND category IN ('flood_risk', 'drought_zone', 'disaster_risk')
+          AND geom && !BBOX!
+          AND ST_IsValid(geom)
+    """
+
+    # ── Yield Prediction zones ─────────────────────────────────────────────────
+    [[providers.layers]]
+    name = "yield_zones"
+    geometry_fieldname = "geom"
+    id_fieldname = "id"
+    geometry_type = "MultiPolygon"
+    sql = """
+        SELECT
+            id, name, category, geom_type,
+            (properties->>'predicted_yield')::float AS predicted_yield,
+            ST_AsBinary(geom) AS geom
+        FROM spatial_features
+        WHERE geom_type IN ('ST_Polygon', 'ST_MultiPolygon')
+          AND category IN ('yield_zone', 'yield_prediction')
+          AND geom && !BBOX!
+          AND ST_IsValid(geom)
+    """
+
     # ── Lahan Baku Sawah Nasional (LBS) ───────────────────────────────────────
-    # Source: lbs_50k_nasional_subdiv (3.4M pre-subdivided cells, max 64 vertices)
     #
     # At low zoom, filter out small cells using their bounding-box area
     # (Box2D is free since PostGIS caches it). Simplify vertex-heavy cells to
@@ -153,6 +230,30 @@ bounds = [95.0, -11.0, 141.0, 6.0]
     [[maps.layers]]
     provider_layer = "postgis.points"
     min_zoom = 0
+    max_zoom = 16
+
+    [[maps.layers]]
+    provider_layer = "postgis.ai_boundaries"
+    name = "ai_boundaries"
+    min_zoom = 7
+    max_zoom = 16
+
+    [[maps.layers]]
+    provider_layer = "postgis.crop_health"
+    name = "crop_health"
+    min_zoom = 7
+    max_zoom = 16
+
+    [[maps.layers]]
+    provider_layer = "postgis.disaster_risk"
+    name = "disaster_risk"
+    min_zoom = 7
+    max_zoom = 16
+
+    [[maps.layers]]
+    provider_layer = "postgis.yield_zones"
+    name = "yield_zones"
+    min_zoom = 7
     max_zoom = 16
 
 # ── Map: food_monitoring (LSD + LBS only) ────────────────────────────────────

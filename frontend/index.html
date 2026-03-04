@@ -30,6 +30,10 @@
         <button class="tab-btn active" data-tab="asset-management">Asset Management</button>
         <button class="tab-btn" data-tab="imagery">Imagery</button>
         <button class="tab-btn" data-tab="monitoring-setting">Monitoring Setting</button>
+        <button class="tab-btn" data-tab="ai">AI Analysis</button>
+        <button class="tab-btn" data-tab="crop-health">Crop Health</button>
+        <button class="tab-btn" data-tab="disaster-risk">Disaster Risk</button>
+        <button class="tab-btn" data-tab="yield-prediction">Yield Prediction</button>
         <button class="tab-btn" data-tab="summary">Summary</button>
     </nav>
 
@@ -225,6 +229,110 @@
                     <h3>Planet</h3>
                     <p class="imagery-coming-soon">Planet high-resolution daily imagery will be available here once a Planet API key is configured.</p>
                     <button class="btn btn-secondary btn-block" disabled style="opacity:.45;cursor:not-allowed;">Connect Planet API</button>
+                </div>
+            </div>
+
+            <!-- ── Tab: AI Analysis ───────────────────────────────────── -->
+            <div class="tab-panel" id="panel-ai">
+                <div class="sidebar-section">
+                    <h3>Farm Boundary Detection</h3>
+                    <p class="imagery-hint">AI-detected farm boundaries from Sentinel-2 imagery. Run analysis from Monitoring Setting to populate.</p>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-farm-boundary" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Farm Boundaries</span></label>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Crop Classification</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-crop-classification" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Crop Classification</span></label>
+                    </div>
+                    <div class="legend" id="legend-ai">
+                        <div class="legend-item"><span class="legend-swatch" style="background:#16a34a"></span>Rice</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#ca8a04"></span>Corn</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#7c3aed"></span>Soybean</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#0891b2"></span>Sugarcane</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#94a3b8"></span>Other</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Tab: Crop Health Monitoring ───────────────────────── -->
+            <div class="tab-panel" id="panel-crop-health">
+                <div class="sidebar-section">
+                    <h3>NDVI Analysis</h3>
+                    <p class="imagery-hint">Run analysis on an archived scene to generate NDVI zones on the map.</p>
+                    <div class="filter-group">
+                        <label class="form-label">Archived Scene</label>
+                        <select id="ndvi-scene-select" class="form-control">
+                            <option value="">— select AOI first —</option>
+                        </select>
+                    </div>
+                    <button id="ndvi-run-btn" class="btn btn-primary btn-block">▶ Run NDVI Analysis</button>
+                    <div id="ndvi-run-status" class="imagery-msg" style="margin-top:8px;display:none;"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Layers</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-ndvi" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">NDVI Zones</span></label>
+                        <label class="sw"><input type="checkbox" id="toggle-fertilizer" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Fertilizer Zones</span></label>
+                    </div>
+                    <div class="legend" id="legend-ndvi">
+                        <div class="legend-item"><span class="legend-swatch" style="background:#16a34a"></span>Healthy (NDVI &gt; 0.4)</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#facc15"></span>Moderate (0.2–0.4)</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#f97316"></span>Low (0–0.2)</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#dc2626"></span>Critical (&lt; 0)</div>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>AOI Filter</h3>
+                    <div id="crop-health-aoi-mount"></div>
+                </div>
+            </div>
+
+            <!-- ── Tab: Disaster Risk ─────────────────────────────────── -->
+            <div class="tab-panel" id="panel-disaster-risk">
+                <div class="sidebar-section">
+                    <h3>Risk Layers</h3>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-flood-risk" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Flood Risk</span></label>
+                        <label class="sw"><input type="checkbox" id="toggle-drought" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Drought Zones</span></label>
+                    </div>
+                    <div class="legend" id="legend-disaster">
+                        <div class="legend-item"><span class="legend-swatch" style="background:#dc2626"></span>High Risk</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#f97316"></span>Medium Risk</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#fbbf24"></span>Low Risk</div>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Weather Conditions</h3>
+                    <div id="disaster-province-select-mount"></div>
+                    <div id="weather-card-container" style="margin-top:12px;">
+                        <p class="imagery-hint">Select an AOI to view weather data.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Tab: Yield Prediction ─────────────────────────────── -->
+            <div class="tab-panel" id="panel-yield-prediction">
+                <div class="sidebar-section">
+                    <h3>Yield Forecast</h3>
+                    <p class="imagery-hint">Yield estimates computed from NDVI analysis results. Run analysis in Crop Health to populate.</p>
+                    <div class="checkbox-group">
+                        <label class="sw"><input type="checkbox" id="toggle-yield-zones" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Yield Prediction Zones</span></label>
+                    </div>
+                    <div class="legend" id="legend-yield">
+                        <div class="legend-item"><span class="legend-swatch" style="background:#16a34a"></span>&ge; 6 t/ha</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#86efac"></span>4–6 t/ha</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#fde68a"></span>2–4 t/ha</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#fca5a5"></span>&lt; 2 t/ha</div>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Province Stats</h3>
+                    <div id="yield-province-select-mount"></div>
+                    <div id="yield-stats-container" style="margin-top:12px;">
+                        <p class="imagery-hint">Select a province to view yield statistics.</p>
+                    </div>
                 </div>
             </div>
 

@@ -290,6 +290,11 @@ async function _loadArchivedScenes(aoiId) {
         showArchivedScenes(_archivedScenes);
         updateSliderWithArchiveDates(_archivedScenes);
 
+        // Notify Crop Health tab so it can refresh its scene selector
+        window.dispatchEvent(new CustomEvent('archived-scenes-updated', {
+            detail: { aoi_id: aoiId ?? null, count: _archivedScenes.length },
+        }));
+
         if (!_archivedScenes.length) {
             hideSceneImage();   // no scenes — clear any stale overlay
             listEl.innerHTML = '<p class="imagery-msg">No archived scenes for this AOI.</p>';

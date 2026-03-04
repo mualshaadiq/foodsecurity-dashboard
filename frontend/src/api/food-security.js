@@ -92,3 +92,53 @@ export async function deleteAOI(id) {
     });
     if (!res.ok) throw new Error('Failed to delete AOI');
 }
+
+// ── Analysis API ──────────────────────────────────────────────────────────
+
+const ANALYSIS_BASE = '/api/analysis';
+
+/**
+ * POST /api/analysis/run
+ * Runs Sentinel-2 NDVI analysis on a specific archived scene.
+ * @param {number} sceneId
+ * @returns {Promise<{id, scene_id, ndvi_mean, ndvi_class, estimated_area_ha, predicted_yield_ton, analyzed_at}>}
+ */
+export async function runAnalysis(sceneId) {
+    const res = await authManager.fetchWithAuth(`${ANALYSIS_BASE}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scene_id: sceneId }),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Analysis failed (${res.status})`);
+    }
+    return res.json();
+}
+
+/**
+ * GET /api/analysis/results?aoi_id=
+ * @param {number|null} aoiId
+ */
+export async function getAnalysisResults(aoiId = null) {
+    const url = aoiId
+        ? `${ANALYSIS_BASE}/results?aoi_id=${aoiId}`
+        : `${ANALYSIS_BASE}/results`;
+    const res = await authManager.fetchWithAuth(url);
+    if (!res.ok) throw new Error('Failed to fetch analysis results');
+    return res.json();
+}
+
+/**
+ * GET /api/analysis/latest-scene/:aoi_id
+ * Returns the most recently archived scene_id for the given AOI.
+ * @param {number} aoiId
+ */
+export async function getLatestScene(aoiId) {
+    const res = await authManager.fetchWithAuth(`${ANALYSIS_BASE}/latest-scene/${aoiId}`);
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'No archived scene found for this AOI');
+    }
+    return res.json();
+}

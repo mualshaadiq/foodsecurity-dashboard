@@ -9,6 +9,7 @@
  */
 
 import { getAOIs }        from '@/api/food-security.js';
+import { getLatestScene, runAnalysis } from '@/api/food-security.js';
 import { authManager }    from '@/auth/auth-manager.js';
 
 // ── Layer definitions ─────────────────────────────────────────────────────
@@ -127,18 +128,34 @@ function _bindButtons() {
         setTimeout(() => (saveBtn.textContent = 'Save Schedule'), 2000);
     });
 
-    runBtn?.addEventListener('click', () => {
+    runBtn?.addEventListener('click', async () => {
         const aoiId = aoiSel?.value;
         if (!aoiId) return;
 
-        // TODO: POST to backend /api/monitoring/run-now
-        console.info('[Monitoring] Run now triggered for AOI:', aoiId);
-        runBtn.disabled     = true;
-        runBtn.textContent  = 'Running…';
-        setTimeout(() => {
+        runBtn.disabled    = true;
+        runBtn.textContent = 'Running…';
+
+        try {
+            // Get the most recently archived scene for this AOI
+            const { scene_id } = await getLatestScene(Number(aoiId));
+
+            // Run Sentinel-2 NDVI + yield analysis
+            const result = await runAnalysis(scene_id);
+
+            runBtn.textContent = '✓ Done';
+            console.info('[Monitoring] Analysis complete:', result);
+
+            // Brief success feedback then reset
+            setTimeout(() => {
+                runBtn.disabled    = false;
+                runBtn.textContent = '▶ Run Analysis Now';
+            }, 3000);
+        } catch (err) {
+            console.error('[Monitoring] Analysis failed:', err);
             runBtn.disabled    = false;
-            runBtn.textContent = 'Run Now';
-        }, 3000);
+            runBtn.textContent = '▶ Run Analysis Now';
+            alert(`Analysis failed: ${err.message}`);
+        }
     });
 }
 

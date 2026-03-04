@@ -249,21 +249,52 @@ async def delete_archived_scene(scene_id: int):
 @router.get("/asset-stats")
 async def asset_stats():
     """
-    Returns a list of province-level asset summary rows.
+    Province-level farm area summary from Sentinel analysis results.
     Shape: [{ province_code, province_name, farm_area_ha, paddy_area_ha }]
-    Returns empty list until real data is loaded.
+    Returns empty list when no scenes have been analysed yet.
     """
-    return []
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT
+                COALESCE(province_code, 'N/A') AS province_code,
+                COALESCE(province_code, 'N/A') AS province_name,
+                ROUND(SUM(estimated_area_ha)::numeric, 2)  AS farm_area_ha,
+                ROUND(AVG(estimated_area_ha)::numeric, 2)  AS paddy_area_ha
+            FROM sentinel_analysis_results
+            GROUP BY province_code
+            ORDER BY farm_area_ha DESC
+            LIMIT 30
+            """
+        )
+    return [dict(r) for r in rows]
 
 
 @router.get("/crop-stats")
 async def crop_stats():
     """
-    Returns a list of crop type distribution rows.
+    NDVI-based crop health distribution from analysis results.
+    Buckets: Healthy (NDVI > 0.4) / Moderate (0.2-0.4) / Stressed (<= 0.2).
     Shape: [{ crop_type, count }]
-    Returns empty list until real data is loaded.
     """
-    return []
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT
+                CASE
+                    WHEN ndvi_mean > 0.4 THEN 'Healthy'
+                    WHEN ndvi_mean > 0.2 THEN 'Moderate'
+                    ELSE 'Stressed'
+                END AS crop_type,
+                COUNT(*)::int AS count
+            FROM sentinel_analysis_results
+            GROUP BY crop_type
+            ORDER BY count DESC
+            """
+        )
+    return [dict(r) for r in rows]
 
 
 @router.get("/ndvi")
@@ -300,12 +331,31 @@ async def monthly_report(
     month: Optional[int] = Query(None),
     year:  Optional[int] = Query(None),
 ):
-    return {
-        "month":   month,
-        "year":    year,
-        "rows":    [],
-        "message": "Report data not yet available",
-    }
+    """
+    Province-level monthly report from Sentinel analysis results.
+    Returns rows: [{ province_code, farm_area_ha, paddy_area_ha, predicted_yield,
+                     fertilizer_used_ton }]
+    Fertilizer estimate: 150 kg/ha (standard Indonesian recommendation).
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT
+                COALESCE(province_code, 'N/A')              AS province_code,
+                ROUND(SUM(estimated_area_ha)::numeric,  2)  AS farm_area_ha,
+                ROUND(AVG(estimated_area_ha)::numeric,  2)  AS paddy_area_ha,
+                ROUND(SUM(predicted_yield_ton)::numeric, 2) AS predicted_yield,
+                ROUND((SUM(estimated_area_ha) * 0.15)::numeric, 2) AS fertilizer_used_ton
+            FROM sentinel_analysis_results
+            WHERE ($1::int IS NULL OR EXTRACT(MONTH FROM analyzed_at) = $1)
+              AND ($2::int IS NULL OR EXTRACT(YEAR  FROM analyzed_at) = $2)
+            GROUP BY province_code
+            ORDER BY farm_area_ha DESC
+            """,
+            month, year,
+        )
+    return [dict(r) for r in rows]
 
 
 @router.get("/available-dates")

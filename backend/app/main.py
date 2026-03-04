@@ -5,7 +5,7 @@ import logging
 
 from app.core.config import settings
 from app.db.connection import create_pool, close_pool, init_admin_user
-from app.api import auth, features, export_routes, food_security, archive_routes
+from app.api import auth, features, export_routes, food_security, archive_routes, analysis_routes
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -54,7 +54,8 @@ app.include_router(auth.router,           prefix="/api/auth",    tags=["Authenti
 app.include_router(features.router,       prefix="/api/features", tags=["Features"])
 app.include_router(export_routes.router,  prefix="/api/export",   tags=["Export"])
 app.include_router(food_security.router,  prefix="/api/food-security", tags=["Food Security"])
-app.include_router(archive_routes.router, prefix="/api/archive",  tags=["Archive"])
+app.include_router(archive_routes.router,  prefix="/api/archive",   tags=["Archive"])
+app.include_router(analysis_routes.router, prefix="/api/analysis",  tags=["Analysis"])
 
 
 @app.get("/")
