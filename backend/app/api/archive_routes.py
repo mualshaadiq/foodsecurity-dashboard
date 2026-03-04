@@ -22,11 +22,12 @@ from typing import Optional
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from app.core.config import settings
 from app.core.storage import (
     build_object_key, upload_bytes, upload_stream,
-    presigned_get_url, delete_object,
+    presigned_get_url, delete_object, get_client,
 )
 from app.db.connection import get_pool
 
@@ -332,7 +333,7 @@ async def archive_scene(body: dict, background_tasks: BackgroundTasks):
         )
 
     feature = _row_to_feature(row)
-    feature["preview_url"]  = presigned
+    feature["preview_url"]  = f"/api/archive/scenes/{row['id']}/thumbnail"
     feature["object_key"]   = preview_key
     feature["metadata_key"] = metadata_key
     feature["visual_url"]   = stac_asset_urls.get("visual", "")
@@ -387,7 +388,7 @@ async def list_archived_scenes(aoi_id: Optional[int] = Query(None)):
         obj_key = feat["properties"].get("object_key")
         if obj_key:
             try:
-                feat["preview_url"] = presigned_get_url(obj_key)
+                feat["preview_url"] = f"/api/archive/scenes/{row['id']}/thumbnail"
             except Exception:
                 feat["preview_url"] = feat["properties"].get("thumbnail", "")
         else:
@@ -426,6 +427,42 @@ async def proxy_image(url: str = Query(..., description="Remote image URL to pro
     )
 
 
+@router.get("/scenes/{scene_id}/thumbnail")
+async def get_scene_thumbnail(scene_id: int):
+    """
+    Stream the preview thumbnail image from MinIO.
+    Used as <img src> so the browser never needs a direct MinIO URL.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT properties FROM spatial_features "
+            "WHERE id = $1 AND category = 'archived_scene'",
+            scene_id,
+        )
+    if not row:
+        raise HTTPException(404, "Scene not found")
+    props = row["properties"] or {}
+    if isinstance(props, str):
+        props = json.loads(props)
+
+    obj_key = props.get("object_key")
+    if not obj_key:
+        raise HTTPException(404, "No thumbnail stored for this scene")
+
+    try:
+        minio = get_client()
+        data  = minio.get_object(settings.MINIO_BUCKET, obj_key)
+        ct    = data.headers.get("Content-Type", "image/jpeg")
+        return StreamingResponse(
+            data,
+            media_type=ct,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    except Exception as exc:
+        raise HTTPException(502, f"Could not fetch thumbnail: {exc}")
+
+
 @router.get("/scenes/{scene_id}")
 async def get_archived_scene(scene_id: int):
     """
@@ -453,7 +490,7 @@ async def get_archived_scene(scene_id: int):
     obj_key = props.get("object_key")
     if obj_key:
         try:
-            feat["preview_url"] = presigned_get_url(obj_key)
+            feat["preview_url"] = f"/api/archive/scenes/{scene_id}/thumbnail"
         except Exception:
             feat["preview_url"] = props.get("thumbnail", "")
     else:
