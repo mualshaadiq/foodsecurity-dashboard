@@ -14,9 +14,15 @@ export function initAssetManagementTab(map) {
     _bindLayerToggle(map, 'toggle-food-estate', 'asset-polygons',   'food_estate');
     _bindLayerToggle(map, 'toggle-irrigation',  'irrigation-lines', null);
 
-    // AoI is served from a local GeoJSON source (not Tegola) so use a dedicated toggle
+    // AoI is served from a local GeoJSON source (not Tegola) so use a dedicated toggle.
+    // initAoiLayer already calls refreshAoiLayer() internally and starts visible.
     initAoiLayer(map);
     _bindAoiToggle();
+
+    // Reload AOIs whenever the user logs in (auth resolves after map boot)
+    window.addEventListener('auth-changed', (e) => {
+        if (e.detail?.authenticated) refreshAoiLayer();
+    });
 
     // On save: refresh list AND map layer
     const _onAoiSave = () => {

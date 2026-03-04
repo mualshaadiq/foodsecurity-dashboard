@@ -36,21 +36,21 @@ export function initAoiLayer(map) {
         id: FILL_ID,
         type: 'fill',
         source: SOURCE_ID,
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
             'fill-color': '#a78bfa',
             'fill-opacity': 0.18,
         },
     });
 
-    // Dashed outline
+    // Dashed outline — white so it stands out on any basemap
     map.addLayer({
         id: LINE_ID,
         type: 'line',
         source: SOURCE_ID,
-        layout: { visibility: 'none' },
+        layout: { visibility: 'visible' },
         paint: {
-            'line-color': '#a78bfa',
+            'line-color': '#ffffff',
             'line-width': 2,
             'line-dasharray': [4, 2],
         },
@@ -62,7 +62,7 @@ export function initAoiLayer(map) {
         type: 'symbol',
         source: SOURCE_ID,
         layout: {
-            visibility: 'none',
+            visibility: 'visible',
             'text-field': ['get', 'name'],
             'text-size': 11,
             'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
@@ -70,13 +70,16 @@ export function initAoiLayer(map) {
             'text-max-width': 10,
         },
         paint: {
-            'text-color': '#7c3aed',
-            'text-halo-color': '#fff',
+            'text-color': '#ffffff',
+            'text-halo-color': '#7c3aed',
             'text-halo-width': 1.5,
         },
     });
 
     _ready = true;
+
+    // Auto-load data immediately so AOIs appear without needing a toggle
+    refreshAoiLayer();
 }
 
 /**
