@@ -1,5 +1,11 @@
 import { listArchivedScenes } from '@/api/scene-archive.js';
 import { runAnalysis } from '@/api/food-security.js';
+import { initNdviLayer, showNdviLayer, hideNdviLayer } from '@/map/layers/ndvi-layer.js';
+
+// Holds the GeoJSON Feature of the currently selected archived scene
+// so showNdviLayer can use its geometry for the bbox hint.
+let _lastScene      = null;
+let _archivedScenes = [];
 
 /**
  * Crop Health Monitoring tab — NDVI layer, fertilizer zone toggle,
@@ -7,11 +13,11 @@ import { runAnalysis } from '@/api/food-security.js';
  * @param {maplibregl.Map} map
  */
 export function initCropHealthTab(map) {
-    _bindVisibilityToggle(map, 'toggle-ndvi',       'ndvi-zones');
+    initNdviLayer(map);
+    _bindNdviToggle(map);
     _bindVisibilityToggle(map, 'toggle-fertilizer', 'fertilizer-zones');
     _bindNdviRunButton(map);
 
-    // React to global time slider date changes
     window.addEventListener('temporal-date-changed', (e) => {
         console.debug('[crop-health] temporal date changed ->', e.detail.date);
     });
@@ -37,6 +43,7 @@ async function _populateSceneSelect(aoiId) {
                     : '';
                 return `<option value="${s.id}">${date}${cc}</option>`;
             }).join('');
+        _archivedScenes = scenes;
     } catch (err) {
         sel.innerHTML = '<option value="">Failed to load scenes</option>';
         console.error('[crop-health] scene load failed:', err);
@@ -62,6 +69,12 @@ function _bindNdviRunButton(map) {
         if (sceneEl.options.length <= 1) _populateSceneSelect(null);
     });
 
+    // Track selected scene feature for geometry bbox hint
+    sceneEl?.addEventListener('change', () => {
+        const id = Number(sceneEl.value);
+        _lastScene = _archivedScenes.find((s) => s.id === id) ?? null;
+    });
+
     runBtn.addEventListener('click', async () => {
         const sceneId = Number(sceneEl?.value);
         if (!sceneId) {
@@ -70,10 +83,10 @@ function _bindNdviRunButton(map) {
         }
 
         runBtn.disabled    = true;
-        runBtn.textContent = 'Running…';
+        runBtn.textContent = 'Computing…';
         if (statusEl) {
             statusEl.style.display = '';
-            statusEl.textContent   = '⏳ Fetching band statistics via TiTiler…';
+            statusEl.textContent   = '⏳ Downloading bands and computing NDVI raster…';
         }
 
         try {
@@ -82,21 +95,24 @@ function _bindNdviRunButton(map) {
             const area   = Number(result.estimated_area_ha).toFixed(1);
             const yld    = Number(result.predicted_yield_ton).toFixed(1);
 
-            if (statusEl) {
-                statusEl.textContent =
-                    `✓ NDVI ${ndvi} (${result.ndvi_class}) · Area ${area} ha · Yield ≈ ${yld} t`;
+            // Show the NDVI COG as a raster tile layer on the map
+            if (result.ndvi_tile_url) {
+                // Find the scene geometry for bbox hint
+                const sceneFeature = _lastScene;
+                showNdviLayer(result.ndvi_tile_url, sceneFeature?.geometry ?? null);
+                // Sync the toggle checkbox
+                const toggle = document.getElementById('toggle-ndvi');
+                if (toggle) toggle.checked = true;
             }
 
-            // Force tile refresh so ndvi_zone polygons appear immediately
-            if (map.getLayer('ndvi-zones')) {
-                map.setLayoutProperty('ndvi-zones', 'visibility', 'none');
-                requestAnimationFrame(() =>
-                    map.setLayoutProperty('ndvi-zones', 'visibility', 'visible'));
-            }
-            if (map.getLayer('yield-zones')) {
-                map.setLayoutProperty('yield-zones', 'visibility', 'none');
-                requestAnimationFrame(() =>
-                    map.setLayoutProperty('yield-zones', 'visibility', 'visible'));
+            if (statusEl) {
+                const procAt = result.ndvi_processed_at
+                    ? new Date(result.ndvi_processed_at).toLocaleString()
+                    : '';
+                statusEl.innerHTML =
+                    `✓ NDVI <strong>${ndvi}</strong> (${result.ndvi_class})`
+                    + ` &middot; ${area}&nbsp;ha &middot; Yield ≈ ${yld}&nbsp;t`
+                    + (procAt ? `<br><small>Processed at ${procAt} &middot; Acq. ${result.acq_date || ''}</small>` : '');
             }
         } catch (err) {
             if (statusEl) statusEl.textContent = `✗ ${err.message}`;
@@ -104,6 +120,21 @@ function _bindNdviRunButton(map) {
         } finally {
             runBtn.disabled    = false;
             runBtn.textContent = '▶ Run NDVI Analysis';
+        }
+    });
+}
+
+// ── NDVI raster visibility toggle ───────────────────────────────────────
+
+function _bindNdviToggle(_map) {
+    const el = document.getElementById('toggle-ndvi');
+    if (!el) return;
+    el.addEventListener('change', () => {
+        if (el.checked) {
+            // Layer already visible from last runAnalysis — nothing to do
+            // unless user wants to re-show; handled by showNdviLayer above.
+        } else {
+            hideNdviLayer();
         }
     });
 }
