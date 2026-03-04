@@ -145,6 +145,44 @@ def presigned_get_url(key: str, expires_hours: int = 72,
     )
 
 
+def upload_stream(key: str, stream, length: int, content_type: str = "application/octet-stream",
+                  bucket: str | None = None) -> str:
+    """
+    Stream-upload a file-like object to MinIO without loading it fully into memory.
+
+    Pass ``length=-1`` if the size is unknown — MinIO will use multipart upload.
+    Returns the s3://bucket/key URI.
+    """
+    bucket = ensure_bucket(bucket)
+    client = get_client()
+    part_size = 10 * 1024 * 1024  # 10 MiB parts for multipart
+    client.put_object(
+        bucket, key,
+        stream, length,
+        content_type=content_type,
+        part_size=part_size,
+    )
+    logger.info("Stream-uploaded → s3://%s/%s", bucket, key)
+    return f"s3://{bucket}/{key}"
+
+
+def presigned_get_url_internal(key: str, expires_hours: int = 72,
+                                bucket: str | None = None) -> str:
+    """
+    Return a presigned GET URL valid for ``expires_hours`` hours, signed
+    against the **internal** MinIO endpoint (e.g. ``minio:9000``).
+
+    Use this instead of ``presigned_get_url`` when the consumer is a
+    service on the same Docker network (e.g. TiTiler), not the browser.
+    """
+    bucket = bucket or settings.MINIO_BUCKET
+    client = get_client()
+    return client.presigned_get_object(
+        bucket, key,
+        expires=timedelta(hours=expires_hours),
+    )
+
+
 def delete_object(key: str, bucket: str | None = None) -> None:
     """Remove an object from MinIO."""
     bucket = bucket or settings.MINIO_BUCKET

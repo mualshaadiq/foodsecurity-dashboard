@@ -22,6 +22,7 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 
+from app.core.storage import presigned_get_url_internal
 from app.db.connection import get_pool
 
 logger = logging.getLogger(__name__)
@@ -147,17 +148,32 @@ async def run_analysis(body: dict):
     aoi_name    = props.get("aoi_name", "")
 
     # ── 2. Resolve band URLs ───────────────────────────────────────────
-    b04_url = (
-        stac_urls.get("B04")
-        or stac_urls.get("red")
-        or stac_urls.get("b04")
-    )
-    b08_url = (
-        stac_urls.get("B08")
-        or stac_urls.get("nir")
-        or stac_urls.get("nir09")
-        or stac_urls.get("b08")
-    )
+    # Prefer locally-cached MinIO COGs (served via TiTiler on same Docker
+    # network) over the original Element84 S3 source URLs.
+    minio_keys = props.get("minio_band_keys") or {}
+    if isinstance(minio_keys, str):
+        import json as _json
+        minio_keys = _json.loads(minio_keys)
+
+    def _band_url(name: str, *aliases) -> str | None:
+        """Return a TiTiler-accessible URL for a band, MinIO-first."""
+        # Check MinIO cache first
+        for n in (name, *aliases):
+            mkey = minio_keys.get(n)
+            if mkey:
+                try:
+                    return presigned_get_url_internal(mkey, expires_hours=2)
+                except Exception as exc:
+                    logger.warning("Presign failed for %s: %s", mkey, exc)
+        # Fall back to original STAC URLs
+        for n in (name, *aliases):
+            url = stac_urls.get(n)
+            if url:
+                return url
+        return None
+
+    b04_url = _band_url("B04", "red", "b04")
+    b08_url = _band_url("B08", "nir", "nir09", "b08")
 
     if not b04_url or not b08_url:
         raise HTTPException(

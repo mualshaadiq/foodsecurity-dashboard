@@ -4,27 +4,39 @@ archive_routes.py — /api/archive/* endpoints
 Archive workflow per scene:
   1. Download the thumbnail/preview JPEG from the STAC asset URL
   2. Serialise the full STAC item as JSON
-  3. Upload both to MinIO under:
-       {provider}/{YYYY}/{MM}/{DD}/{scene-id}-preview.jpg
-       {provider}/{YYYY}/{MM}/{DD}/{scene-id}-metadata.json
-  4. Save scene footprint + metadata to PostGIS (category='archived_scene')
-  5. Return the saved feature + presigned preview URL
+  3. Upload both to MinIO; return immediately with cog_status='pending'
+  4. Background: stream-download all analytical band COGs (B02–B12, SCL, visual)
+     to MinIO and update PostGIS with minio_band_keys + cog_status='complete'
 
-The full-resolution visual COG is NOT auto-downloaded (Sentinel-2 visual
-assets are ~200 MB per tile). Band URLs from the STAC item are stored in
-the metadata JSON for use by downstream processing pipelines.
+MinIO key convention:
+    {aoi_id}/{satellite-provider}/{YYYY}/{MM}/{DD}/{scene-id}-{type}.{ext}
+e.g.
+    3/sentinel-2a/2026/02/26/S2A_31MBN_20260226_0_L2A-B04.tif
+    3/sentinel-2a/2026/02/26/S2A_31MBN_20260226_0_L2A-visual.tif
 """
 
+import io
 import json
 import logging
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from app.core.config import settings
-from app.core.storage import build_object_key, upload_bytes, presigned_get_url, delete_object
+from app.core.storage import (
+    build_object_key, upload_bytes, upload_stream,
+    presigned_get_url, delete_object,
+)
 from app.db.connection import get_pool
+
+# Sentinel-2 L2A band / asset names to download to MinIO.
+# visual = true-colour COG; SCL = scene classification (cloud mask).
+DOWNLOAD_BANDS = frozenset({
+    "B02", "B03", "B04", "B05", "B06", "B07",
+    "B08", "B8A", "B11", "B12",
+    "SCL", "visual",
+})
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -50,10 +62,91 @@ async def _fetch_bytes(url: str) -> tuple[bytes, str]:
     return resp.content, resp.headers.get("content-type", "application/octet-stream")
 
 
+async def _download_bands_to_minio(
+    scene_id: int,
+    stac_asset_urls: dict,
+    aoi_id: int,
+    provider: str,
+    acq_date: str,
+    stac_id: str,
+) -> None:
+    """
+    Background task: download each Sentinel-2 analytical band COG from its
+    original Element84 / AWS source URL and store it in MinIO.
+
+    On completion, PostGIS is updated with:
+      - ``minio_band_keys``  — dict mapping band name → MinIO object key
+      - ``cog_status``       — 'complete' | 'error'
+
+    This allows TiTiler (on the same Docker network) to serve tiles from
+    the local MinIO cache rather than going back to Element84 every time.
+    """
+    minio_band_keys: dict[str, str] = {}
+    failed: list[str] = []
+
+    for band, src_url in stac_asset_urls.items():
+        if band not in DOWNLOAD_BANDS or not src_url:
+            continue
+        try:
+            # Derive file extension from the source URL
+            path_part = src_url.split("?")[0]          # strip query string
+            ext = path_part.rsplit(".", 1)[-1].lower() # e.g. 'tif', 'jp2'
+            if ext not in ("tif", "tiff", "jp2", "jpeg", "jpg", "png"):
+                ext = "tif"
+            ct = "image/tiff" if ext in ("tif", "tiff") else f"image/{ext}"
+
+            key = build_object_key(aoi_id, provider, acq_date, stac_id, f"{band}.{ext}")
+
+            logger.info("Downloading COG band %s for scene %d …", band, scene_id)
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(30.0, read=600.0),
+                follow_redirects=True,
+            ) as client:
+                async with client.stream("GET", src_url) as resp:
+                    resp.raise_for_status()
+                    buf = io.BytesIO()
+                    async for chunk in resp.aiter_bytes(chunk_size=65_536):
+                        buf.write(chunk)
+
+            buf.seek(0)
+            size = len(buf.getvalue())
+            buf.seek(0)
+            upload_stream(key, buf, size, ct)
+            minio_band_keys[band] = key
+            logger.info("Stored band %s → s3://%s/%s", band, settings.MINIO_BUCKET, key)
+
+        except Exception as exc:
+            logger.error("COG download failed for scene %d band %s: %s", scene_id, band, exc)
+            failed.append(band)
+
+    cog_status = "error" if failed else "complete"
+    if failed:
+        logger.warning("Scene %d: %d band(s) failed to download: %s", scene_id, len(failed), failed)
+
+    # Persist MinIO band keys + status back into PostGIS
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE spatial_features
+            SET properties = properties
+                || jsonb_build_object(
+                       'minio_band_keys', $2::jsonb,
+                       'cog_status',      $3
+                   )
+            WHERE id = $1
+            """,
+            scene_id,
+            json.dumps(minio_band_keys),
+            cog_status,
+        )
+    logger.info("Scene %d COG download finished — status: %s", scene_id, cog_status)
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────
 
 @router.post("/scenes", status_code=201)
-async def archive_scene(body: dict):
+async def archive_scene(body: dict, background_tasks: BackgroundTasks):
     """
     Archive a Sentinel-2 STAC scene.
 
@@ -177,6 +270,16 @@ async def archive_scene(body: dict):
     feature["object_key"]   = preview_key
     feature["metadata_key"] = metadata_key
     feature["visual_url"]   = stac_asset_urls.get("visual", "")
+    feature["cog_status"]   = "pending"
+
+    # Kick off background download of all analytical band COGs to MinIO.
+    # The endpoint returns immediately; the download happens asynchronously.
+    saved_id = row["id"]
+    background_tasks.add_task(
+        _download_bands_to_minio,
+        saved_id, stac_asset_urls, aoi_id, platform, acq_date, stac_id,
+    )
+
     return feature
 
 
@@ -276,14 +379,23 @@ async def delete_archived_scene(scene_id: int):
         if isinstance(props, str):
             props = json.loads(props)
 
-        # Remove objects from MinIO (best-effort)
+        # Remove objects from MinIO (best-effort): preview, metadata, and all band COGs
+        keys_to_delete: list[str] = []
         for key_field in ("object_key", "metadata_key"):
-            key = props.get(key_field)
-            if key:
-                try:
-                    delete_object(key)
-                except Exception as exc:
-                    logger.warning("Could not delete MinIO object %s: %s", key, exc)
+            k = props.get(key_field)
+            if k:
+                keys_to_delete.append(k)
+        # Also remove downloaded band COGs
+        minio_band_keys = props.get("minio_band_keys") or {}
+        if isinstance(minio_band_keys, str):
+            minio_band_keys = json.loads(minio_band_keys)
+        keys_to_delete.extend(minio_band_keys.values())
+
+        for key in keys_to_delete:
+            try:
+                delete_object(key)
+            except Exception as exc:
+                logger.warning("Could not delete MinIO object %s: %s", key, exc)
 
         await conn.execute(
             "DELETE FROM spatial_features WHERE id = $1",
