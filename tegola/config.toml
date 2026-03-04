@@ -51,6 +51,9 @@ max_connections = 50
     """
 
     # ── Polygons (general spatial_features) ───────────────────────────────────
+    # Excludes: aoi (GeoJSON source), archived_scene (dedicated layer),
+    # and all analysis categories (ai_boundaries, crop_health, disaster_risk,
+    # yield_zones – each served by their own provider layer above).
     [[providers.layers]]
     name = "polygons"
     geometry_fieldname = "geom"
@@ -69,6 +72,14 @@ max_connections = 50
             ) AS geom
         FROM spatial_features
         WHERE geom_type IN ('ST_Polygon', 'ST_MultiPolygon')
+          AND category NOT IN (
+              'aoi',
+              'archived_scene',
+              'farm_boundary', 'crop_classification', 'ai_boundary',
+              'ndvi_zone', 'fertilizer_zone', 'crop_health',
+              'flood_risk', 'drought_zone', 'disaster_risk',
+              'yield_zone', 'yield_prediction'
+          )
           AND geom && !BBOX!
           AND ST_IsValid(geom)
     """
