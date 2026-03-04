@@ -43,19 +43,26 @@ async def _recover_interrupted_downloads() -> None:
     try:
         pool = get_pool()
         async with pool.acquire() as conn:
+            # Atomically claim un-finished scenes so only one worker recovers each.
             rows = await conn.fetch(
                 """
-                SELECT id,
-                       (properties->>'aoi_id')::int       AS aoi_id,
-                       properties->>'platform'             AS provider,
-                       properties->>'acq_date'             AS acq_date,
-                       properties->>'stac_id'              AS stac_id,
-                       properties->'stac_asset_urls'       AS stac_asset_urls_json
-                FROM spatial_features
-                WHERE category = 'archived_scene'
-                  AND COALESCE(properties->>'cog_status', 'pending')
-                      NOT IN ('complete', 'error')
-                ORDER BY id
+                WITH to_claim AS (
+                    SELECT id FROM spatial_features
+                    WHERE category = 'archived_scene'
+                      AND COALESCE(properties->>'cog_status', 'pending')
+                          NOT IN ('complete', 'error', 'recovering')
+                    FOR UPDATE SKIP LOCKED
+                )
+                UPDATE spatial_features sf
+                SET properties = sf.properties || '{"cog_status":"recovering"}'::jsonb
+                FROM to_claim
+                WHERE sf.id = to_claim.id
+                RETURNING sf.id,
+                          (sf.properties->>'aoi_id')::int  AS aoi_id,
+                          sf.properties->>'platform'        AS provider,
+                          sf.properties->>'acq_date'        AS acq_date,
+                          sf.properties->>'stac_id'         AS stac_id,
+                          sf.properties->'stac_asset_urls'  AS stac_asset_urls_json
                 """
             )
         if not rows:
