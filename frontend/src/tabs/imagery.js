@@ -42,6 +42,7 @@ let _map            = null;
 let _aois           = [];
 let _results        = [];     // last STAC search results
 let _archivedScenes = [];     // scenes saved to archive
+let _lastScene      = null;   // last scene passed to showSceneImage
 
 // ── Entry point ───────────────────────────────────────────────────────────
 export async function initImageryTab(map) {
@@ -60,6 +61,22 @@ export async function initImageryTab(map) {
     // Scene preview image overlay
     initSceneImageryLayer(map);
 
+    // Wire toggle-scene checkbox (in floating layer panel)
+    document.getElementById('toggle-scene')?.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            if (_lastScene) {
+                showSceneImage(
+                    _lastScene.preview_url,
+                    _lastScene.geometry,
+                    1,
+                    _lastScene.visual_url || null,
+                );
+            }
+        } else {
+            hideSceneImage();
+        }
+    });
+
     // Show imagery on slider date change — imagery mode OR global data mode
     window.addEventListener('temporal-date-changed', (e) => {
         if (e.detail.mode !== 'imagery' && e.detail.mode !== 'data') return;
@@ -72,8 +89,13 @@ export async function initImageryTab(map) {
 
         const ready = scene?.properties?.cog_status === 'complete';
         if (ready && scene?.geometry) {
-            showSceneImage(scene.preview_url, scene.geometry, 1, scene.visual_url || null);
+            _lastScene = scene;
+            const toggleScene = document.getElementById('toggle-scene');
+            if (!toggleScene || toggleScene.checked) {
+                showSceneImage(scene.preview_url, scene.geometry, 1, scene.visual_url || null);
+            }
         } else {
+            _lastScene = null;
             hideSceneImage();
         }
     });

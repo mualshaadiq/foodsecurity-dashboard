@@ -4,7 +4,7 @@
 
 #layer-panel {
     position: absolute;
-    bottom: 24px;
+    bottom: 60px;
     right: 12px;
     z-index: 200;
     min-width: 210px;
@@ -60,7 +60,7 @@
 
 /* ── Body ────────────────────────────────────────────────── */
 .lp-body {
-    max-height: 340px;
+    max-height: 440px;
     overflow-y: auto;
     transition: max-height 0.3s ease, padding 0.2s ease;
     padding: 4px 0 10px;
@@ -120,9 +120,10 @@
     background: rgba(255, 255, 255, 0.05);
 }
 
-.lp-item label {
+.lp-item label,
+.lp-item-text {
     font-size: 12px;
-    color: #cbd5e1;
+    color: #e2e8f0;
     cursor: pointer;
     user-select: none;
     flex: 1;

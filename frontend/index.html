@@ -178,13 +178,6 @@
             <div class="tab-panel" id="panel-imagery">
                 <div class="sidebar-section">
                     <h3>Sentinel-2</h3>
-                    <div class="checkbox-group">
-                        <label class="sw">
-                            <input type="checkbox" id="toggle-sentinel" class="sw-input" checked>
-                            <span class="sw-track"><span class="sw-knob"></span></span>
-                            <span class="sw-text">Show Sentinel-2 Layer</span>
-                        </label>
-                    </div>
                     <div class="filter-group" style="margin-top:12px;">
                         <label class="form-label">Cloudless Year</label>
                         <select id="sentinel-year-select" class="form-control">
@@ -251,15 +244,9 @@
                 <div class="sidebar-section">
                     <h3>Farm Boundary Detection</h3>
                     <p class="imagery-hint">AI-detected farm boundaries from Sentinel-2 imagery. Run analysis from Monitoring Setting to populate.</p>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-farm-boundary" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Farm Boundaries</span></label>
-                    </div>
                 </div>
                 <div class="sidebar-section">
                     <h3>Crop Classification</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-crop-classification" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Crop Classification</span></label>
-                    </div>
                     <div class="legend" id="legend-ai">
                         <div class="legend-item"><span class="legend-swatch" style="background:#16a34a"></span>Rice</div>
                         <div class="legend-item"><span class="legend-swatch" style="background:#ca8a04"></span>Corn</div>
@@ -286,10 +273,6 @@
                 </div>
                 <div class="sidebar-section">
                     <h3>Layers</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-ndvi" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">NDVI Zones</span></label>
-                        <label class="sw"><input type="checkbox" id="toggle-fertilizer" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Fertilizer Zones</span></label>
-                    </div>
                     <div class="legend" id="legend-ndvi">
                         <div class="legend-item"><span class="legend-swatch" style="background:#16a34a"></span>Healthy (NDVI &gt; 0.4)</div>
                         <div class="legend-item"><span class="legend-swatch" style="background:#facc15"></span>Moderate (0.2–0.4)</div>
@@ -307,10 +290,6 @@
             <div class="tab-panel" id="panel-disaster-risk">
                 <div class="sidebar-section">
                     <h3>Risk Layers</h3>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-flood-risk" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Flood Risk</span></label>
-                        <label class="sw"><input type="checkbox" id="toggle-drought" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Drought Zones</span></label>
-                    </div>
                     <div class="legend" id="legend-disaster">
                         <div class="legend-item"><span class="legend-swatch" style="background:#dc2626"></span>High Risk</div>
                         <div class="legend-item"><span class="legend-swatch" style="background:#f97316"></span>Medium Risk</div>
@@ -331,9 +310,6 @@
                 <div class="sidebar-section">
                     <h3>Yield Forecast</h3>
                     <p class="imagery-hint">Yield estimates computed from NDVI analysis results. Run analysis in Crop Health to populate.</p>
-                    <div class="checkbox-group">
-                        <label class="sw"><input type="checkbox" id="toggle-yield-zones" class="sw-input"><span class="sw-track"><span class="sw-knob"></span></span><span class="sw-text">Yield Prediction Zones</span></label>
-                    </div>
                     <div class="legend" id="legend-yield">
                         <div class="legend-item"><span class="legend-swatch" style="background:#16a34a"></span>&ge; 6 t/ha</div>
                         <div class="legend-item"><span class="legend-swatch" style="background:#86efac"></span>4–6 t/ha</div>
@@ -368,6 +344,22 @@
                 </button>
                 <div class="lp-body" id="layer-panel-body">
 
+                    <!-- Imagery -->
+                    <div class="lp-group">
+                        <div class="lp-group-header">
+                            <span class="lp-dot" style="background:#60a5fa"></span>
+                            <span class="lp-group-name">Imagery</span>
+                        </div>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="toggle-sentinel" data-layers="sentinel-imagery-layer" checked>
+                            <span class="lp-item-text">Sentinel-2 (Cloudless)</span>
+                        </label>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="toggle-scene" data-layers="scene-preview-layer" checked>
+                            <span class="lp-item-text">Sentinel-2 Scene</span>
+                        </label>
+                    </div>
+
                     <!-- AI Analysis -->
                     <div class="lp-group">
                         <div class="lp-group-header">
@@ -375,12 +367,12 @@
                             <span class="lp-group-name">AI Analysis</span>
                         </div>
                         <label class="lp-item">
-                            <input type="checkbox" class="lp-check" id="lp-delineation" data-layers="farm-boundary,farm-boundary-outline">
-                            <span class="lp-item-text">Delineation</span>
+                            <input type="checkbox" class="lp-check" id="toggle-farm-boundary" data-layers="farm-boundary,farm-boundary-outline">
+                            <span class="lp-item-text">Farm Boundaries</span>
                         </label>
                         <label class="lp-item">
-                            <input type="checkbox" class="lp-check" id="lp-classification" data-layers="crop-classification">
-                            <span class="lp-item-text">Classification</span>
+                            <input type="checkbox" class="lp-check" id="toggle-crop-classification" data-layers="crop-classification">
+                            <span class="lp-item-text">Crop Classification</span>
                         </label>
                     </div>
 
@@ -391,12 +383,12 @@
                             <span class="lp-group-name">Crop Health</span>
                         </div>
                         <label class="lp-item">
-                            <input type="checkbox" class="lp-check" id="lp-ndvi" data-layers="ndvi-zones">
-                            <span class="lp-item-text">NDVI</span>
+                            <input type="checkbox" class="lp-check" id="toggle-ndvi" data-layers="ndvi-zones">
+                            <span class="lp-item-text">NDVI Zones</span>
                         </label>
                         <label class="lp-item">
-                            <input type="checkbox" class="lp-check" id="lp-fertilizer" data-layers="fertilizer-zones">
-                            <span class="lp-item-text">Fertilizer Zone</span>
+                            <input type="checkbox" class="lp-check" id="toggle-fertilizer" data-layers="fertilizer-zones">
+                            <span class="lp-item-text">Fertilizer Zones</span>
                         </label>
                     </div>
 
@@ -407,12 +399,12 @@
                             <span class="lp-group-name">Disaster Risk</span>
                         </div>
                         <label class="lp-item">
-                            <input type="checkbox" class="lp-check" id="lp-flood" data-layers="flood-risk">
+                            <input type="checkbox" class="lp-check" id="toggle-flood-risk" data-layers="flood-risk">
                             <span class="lp-item-text">Flood Risk</span>
                         </label>
                         <label class="lp-item">
-                            <input type="checkbox" class="lp-check" id="lp-drought" data-layers="drought-zones">
-                            <span class="lp-item-text">Drought</span>
+                            <input type="checkbox" class="lp-check" id="toggle-drought" data-layers="drought-zones">
+                            <span class="lp-item-text">Drought Zones</span>
                         </label>
                     </div>
 
@@ -423,7 +415,7 @@
                             <span class="lp-group-name">Yield</span>
                         </div>
                         <label class="lp-item">
-                            <input type="checkbox" class="lp-check" id="lp-yield" data-layers="yield-zones,yield-zones-outline">
+                            <input type="checkbox" class="lp-check" id="toggle-yield-zones" data-layers="yield-zones,yield-zones-outline">
                             <span class="lp-item-text">Yield Prediction</span>
                         </label>
                     </div>

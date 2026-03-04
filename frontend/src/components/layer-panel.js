@@ -61,9 +61,9 @@ export function initLayerPanel(map) {
 
     // ── Wire each checkbox ────────────────────────────────────────────────
     document.querySelectorAll('.lp-check').forEach((cb) => {
-        // Restore saved state (default: OFF / unchecked)
+        // Restore saved state; if no saved state use the element's default (HTML attribute)
         const saved = localStorage.getItem(LS_PREFIX + cb.id);
-        cb.checked = saved === 'true';
+        cb.checked = saved !== null ? saved === 'true' : cb.defaultChecked;
 
         // Apply initial visibility once map layers exist
         _applyLayers(map, cb);

@@ -216,8 +216,10 @@ select.form-control option {
     position: fixed;
     inset: 0;
     z-index: 1000;
-    background: rgba(0,0,0,.65);
-    backdrop-filter: blur(4px);
+    /* Warm amber-tinted dark overlay instead of neutral black */
+    background: rgba(26, 14, 2, 0.72);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .modal.active {
@@ -227,13 +229,14 @@ select.form-control option {
 }
 
 .modal-content {
-    background: var(--bg-card);
-    border: 1px solid rgba(160,120,40,.18);
+    background: var(--bg-card);                    /* #fffdf5 warm cream */
+    border: 1px solid var(--border-strong);        /* amber border */
+    border-top: 3px solid var(--accent);           /* accent bar at top */
     padding: 28px;
-    border-radius: 6px;
+    border-radius: 0;                             /* Aetosky flat-rect */
     width: 90%;
     max-width: 400px;
-    box-shadow: 0 8px 32px rgba(100,70,20,.18);
+    box-shadow: var(--shadow-md), 0 0 0 1px rgba(184,112,16,.06);
     position: relative;
     color: var(--text-primary);
 }
@@ -243,6 +246,8 @@ select.form-control option {
     font-weight: 600;
     color: var(--accent);
     margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
     letter-spacing: -.01em;
 }
 
@@ -257,9 +262,9 @@ select.form-control option {
     line-height: 1;
     background: none;
     border: none;
-    transition: color .15s;
+    transition: color .15s, transform .15s;
 }
-.close:hover { color: var(--accent); }
+.close:hover { color: var(--accent); transform: scale(1.15); }
 
 /* ─── Error Message ─────────────────────────────────────────────────────── */
 .error-message {
