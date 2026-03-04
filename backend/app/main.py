@@ -1,10 +1,12 @@
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
 from app.core.config import settings
-from app.db.connection import create_pool, close_pool, init_admin_user
+from app.db.connection import create_pool, close_pool, init_admin_user, get_pool
 from app.api import auth, features, export_routes, food_security, archive_routes, analysis_routes
 
 # Configure logging
@@ -23,13 +25,61 @@ async def lifespan(app: FastAPI):
     await init_admin_user()
     
     logger.info("Application started successfully")
-    
+
+    # Re-queue any archive downloads that were interrupted by a previous
+    # container restart (cog_status missing, 'pending', or 'downloading').
+    asyncio.create_task(_recover_interrupted_downloads())
+
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
     await close_pool()
     logger.info("Application shutdown complete")
+
+
+async def _recover_interrupted_downloads() -> None:
+    """Re-queue band downloads for scenes whose background task was killed."""
+    try:
+        pool = get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT id,
+                       (properties->>'aoi_id')::int       AS aoi_id,
+                       properties->>'platform'             AS provider,
+                       properties->>'acq_date'             AS acq_date,
+                       properties->>'stac_id'              AS stac_id,
+                       properties->'stac_asset_urls'       AS stac_asset_urls_json
+                FROM spatial_features
+                WHERE category = 'archived_scene'
+                  AND COALESCE(properties->>'cog_status', 'pending')
+                      NOT IN ('complete', 'error')
+                ORDER BY id
+                """
+            )
+        if not rows:
+            return
+        import json
+        for row in rows:
+            scene_id = row["id"]
+            stac_urls_raw = row["stac_asset_urls_json"]
+            if not stac_urls_raw:
+                continue
+            stac_asset_urls = json.loads(stac_urls_raw) if isinstance(stac_urls_raw, str) else dict(stac_urls_raw)
+            logger.info("Startup recovery: re-queuing COG download for scene %d", scene_id)
+            asyncio.create_task(
+                archive_routes._download_bands_to_minio(
+                    scene_id,
+                    stac_asset_urls,
+                    row["aoi_id"],
+                    row["provider"],
+                    row["acq_date"],
+                    row["stac_id"],
+                )
+            )
+    except Exception as exc:
+        logger.error("Startup recovery failed: %s", exc)
 
 
 # Create FastAPI application

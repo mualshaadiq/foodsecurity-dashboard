@@ -267,6 +267,8 @@ async def archive_scene(body: dict, background_tasks: BackgroundTasks):
         "thumbnail":       preview_url_src,
         # All STAC asset URLs for downstream processing
         "stac_asset_urls": stac_asset_urls,
+        # Explicitly set pending so recovery logic can detect unfinished downloads
+        "cog_status":      "pending",
     }
 
     scene_name = f"{acq_date} · {aoi_name}"
