@@ -428,6 +428,14 @@ async def get_archived_scene(scene_id: int):
     feat["cog_status"]       = props.get("cog_status", "pending")
 
     stac_urls = props.get("stac_asset_urls") or {}
+    if isinstance(stac_urls, str):
+        stac_urls = json.loads(stac_urls)
+    # Total bands = how many stac asset keys the backend will actually download.
+    # This is the authoritative number so the frontend progress bar is accurate.
+    feat["total_bands"] = sum(
+        1 for k in stac_urls if k in DOWNLOAD_BANDS
+    ) or len(DOWNLOAD_BANDS)
+
     feat["visual_url"] = minio_keys.get("visual", "") or stac_urls.get("visual", "")
     return feat
 

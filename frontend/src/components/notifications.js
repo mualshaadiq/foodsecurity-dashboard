@@ -188,12 +188,16 @@ async function _pollTask(task) {
 
         const status     = data.cog_status ?? 'pending';
         const downloaded = data.bands_downloaded ?? 0;
+        // Use authoritative total from backend; fall back to stored totalBands.
+        const totalFromApi = data.total_bands;
+        if (totalFromApi && totalFromApi > 0) task.totalBands = totalFromApi;
 
         task.downloaded = downloaded;
-        task.status     = status === 'complete'    ? 'complete'
-                        : status === 'error'       ? 'error'
-                        : status === 'downloading' ? 'downloading'
-                        : downloaded > 0           ? 'downloading'
+        task.status     = status === 'complete'              ? 'complete'
+                        : status === 'error'                 ? 'error'
+                        : status === 'downloading'           ? 'downloading'
+                        : status === 'recovering'            ? 'downloading'
+                        : downloaded > 0                     ? 'downloading'
                         : 'pending';
 
         if (task.status === 'complete' || task.status === 'error') {
@@ -226,7 +230,9 @@ function _renderList() {
     }
 
     _listEl.innerHTML = _tasks.map((t) => {
-        const pct    = t.totalBands ? Math.round((t.downloaded / t.totalBands) * 100) : 0;
+        // Never show 100% while still downloading — that would be misleading.
+        const rawPct = t.totalBands ? Math.round((t.downloaded / t.totalBands) * 100) : 0;
+        const pct    = (t.status === 'downloading' && rawPct >= 100) ? 99 : rawPct;
         const cls    = `notif-item notif-item--${t.status}`;
         const icon   = t.status === 'complete'    ? '✅'
                      : t.status === 'error'       ? '❌'
