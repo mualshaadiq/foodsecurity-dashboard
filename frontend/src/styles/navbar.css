@@ -249,3 +249,14 @@
     transition: width .4s ease;
 }
 
+/* Indeterminate animation while status is still 'pending' (no progress yet) */
+.notif-progress--indeterminate .notif-progress-fill {
+    width: 35% !important;
+    animation: notif-slide 1.4s ease-in-out infinite;
+}
+@keyframes notif-slide {
+    0%   { transform: translateX(-100%); }
+    50%  { transform: translateX(185%); }
+    100% { transform: translateX(185%); }
+}
+

@@ -190,9 +190,10 @@ async function _pollTask(task) {
         const downloaded = data.bands_downloaded ?? 0;
 
         task.downloaded = downloaded;
-        task.status     = status === 'complete' ? 'complete'
-                        : status === 'error'    ? 'error'
-                        : downloaded > 0        ? 'downloading'
+        task.status     = status === 'complete'    ? 'complete'
+                        : status === 'error'       ? 'error'
+                        : status === 'downloading' ? 'downloading'
+                        : downloaded > 0           ? 'downloading'
                         : 'pending';
 
         if (task.status === 'complete' || task.status === 'error') {
@@ -241,7 +242,9 @@ function _renderList() {
         }).format(new Date(t.createdAt));
 
         const bar = (t.status === 'downloading' || t.status === 'pending')
-            ? `<div class="notif-progress"><div class="notif-progress-fill" style="width:${pct}%"></div></div>`
+            ? `<div class="notif-progress${t.status === 'pending' ? ' notif-progress--indeterminate' : ''}">
+                 <div class="notif-progress-fill" style="width:${pct}%"></div>
+               </div>`
             : '';
 
         return `

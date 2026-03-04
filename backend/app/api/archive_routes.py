@@ -84,6 +84,17 @@ async def _download_bands_to_minio(
     minio_band_keys: dict[str, str] = {}
     failed: list[str] = []
 
+    # Mark scene as actively downloading immediately so the frontend poller
+    # can show a progress indicator rather than staying on 'pending'.
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE spatial_features "
+            "SET properties = properties || jsonb_build_object('cog_status', 'downloading') "
+            "WHERE id = $1",
+            scene_id,
+        )
+
     for band, src_url in stac_asset_urls.items():
         if band not in DOWNLOAD_BANDS or not src_url:
             continue
@@ -115,6 +126,21 @@ async def _download_bands_to_minio(
             minio_band_keys[band] = key
             logger.info("Stored band %s → s3://%s/%s", band, settings.MINIO_BUCKET, key)
 
+            # Update PostGIS after every successful band so the frontend
+            # poller reflects real progress (bands_downloaded count).
+            async with pool.acquire() as conn:
+                await conn.execute(
+                    "UPDATE spatial_features "
+                    "SET properties = properties "
+                    "    || jsonb_build_object("
+                    "           'minio_band_keys', $2::jsonb,"
+                    "           'cog_status',      'downloading'"
+                    "       ) "
+                    "WHERE id = $1",
+                    scene_id,
+                    json.dumps(minio_band_keys),
+                )
+
         except Exception as exc:
             logger.error("COG download failed for scene %d band %s: %s", scene_id, band, exc)
             failed.append(band)
@@ -123,8 +149,7 @@ async def _download_bands_to_minio(
     if failed:
         logger.warning("Scene %d: %d band(s) failed to download: %s", scene_id, len(failed), failed)
 
-    # Persist MinIO band keys + status back into PostGIS
-    pool = get_pool()
+    # Persist final MinIO band keys + terminal status back into PostGIS
     async with pool.acquire() as conn:
         await conn.execute(
             """
