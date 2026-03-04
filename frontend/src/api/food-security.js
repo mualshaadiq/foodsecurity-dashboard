@@ -117,6 +117,24 @@ export async function runAnalysis(sceneId) {
 }
 
 /**
+ * POST /api/analysis/run-ndwi
+ * Runs Sentinel-2 NDWI analysis on a specific archived scene.
+ * @param {number} sceneId
+ */
+export async function runNdwiAnalysis(sceneId) {
+    const res = await authManager.fetchWithAuth(`${ANALYSIS_BASE}/run-ndwi`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scene_id: sceneId }),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `NDWI analysis failed (${res.status})`);
+    }
+    return res.json();
+}
+
+/**
  * GET /api/analysis/results?aoi_id=
  * @param {number|null} aoiId
  */

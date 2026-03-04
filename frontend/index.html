@@ -297,6 +297,24 @@
                     </div>
                 </div>
                 <div class="sidebar-section">
+                    <h3>NDWI Water Index</h3>
+                    <p class="imagery-hint">Normalized Difference Water Index derived from Sentinel-2 B03/B08. High values indicate open water / flood extent.</p>
+                    <div class="filter-group">
+                        <label class="form-label">Archived Scene</label>
+                        <select id="ndwi-scene-select" class="form-control">
+                            <option value="">— select AOI first —</option>
+                        </select>
+                    </div>
+                    <button id="ndwi-run-btn" class="btn btn-primary btn-block">▶ Run NDWI Analysis</button>
+                    <div id="ndwi-run-status" class="imagery-msg" style="margin-top:8px;display:none;"></div>
+                    <div class="legend" style="margin-top:10px;">
+                        <div class="legend-item"><span class="legend-swatch" style="background:#08306b"></span>High water (&gt; 0.3)</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#4292c6"></span>Moderate (0.1–0.3)</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#c6dbef"></span>Low / moist (0–0.1)</div>
+                        <div class="legend-item"><span class="legend-swatch" style="background:#f7fbff"></span>Dry (&lt; 0)</div>
+                    </div>
+                </div>
+                <div class="sidebar-section">
                     <h3>Weather Conditions</h3>
                     <div id="disaster-province-select-mount"></div>
                     <div id="weather-card-container" style="margin-top:12px;">
@@ -405,6 +423,10 @@
                         <label class="lp-item">
                             <input type="checkbox" class="lp-check" id="toggle-drought" data-layers="drought-zones">
                             <span class="lp-item-text">Drought Zones</span>
+                        </label>
+                        <label class="lp-item">
+                            <input type="checkbox" class="lp-check" id="toggle-ndwi-raster">
+                            <span class="lp-item-text">NDWI Raster</span>
                         </label>
                     </div>
 

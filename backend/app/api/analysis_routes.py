@@ -80,6 +80,15 @@ def _build_tile_url(ndvi_cog_url: str, p2: float, p98: float) -> str:
     )
 
 
+def _build_ndwi_tile_url(ndwi_cog_url: str, p2: float, p98: float) -> str:
+    """Build a TiTiler tile URL for NDWI; blues colormap (high = more water)."""
+    return (
+        "/titiler/cog/tiles/WebMercatorQuad/{z}/{x}/{y}"
+        + "?url=" + urllib.parse.quote(ndwi_cog_url, safe="")
+        + f"&colormap_name=blues&rescale={p2:.4f},{p98:.4f}&nodata=-9999"
+    )
+
+
 def _compute_ndvi_cog(b04_url, b08_url, aoi_id, provider, acq_date, scene_id, acq_date_iso):
     """
     Download B04+B08 via rasterio/vsicurl, compute NDVI raster, upload proper COG to MinIO.
@@ -229,6 +238,306 @@ def _compute_ndvi_cog(b04_url, b08_url, aoi_id, provider, acq_date, scene_id, ac
                 pass
 
     return key, ndvi_mean, ndvi_class, ndvi_p2, ndvi_p98
+
+
+def _compute_ndwi_cog(b03_url, b08_url, aoi_id, provider, acq_date, scene_id, acq_date_iso):
+    """
+    Download B03 (Green) + B08 (NIR) via rasterio/vsicurl, compute NDWI raster,
+    upload proper COG to MinIO.
+
+    NDWI (McFeeters 1996) = (B03 - B08) / (B03 + B08)
+    Positive values indicate open water; negative values indicate dry land / vegetation.
+
+    Returns (ndwi_tif_key, ndwi_mean, ndwi_class, ndwi_p2, ndwi_p98).
+    """
+    logger.info("NDWI: opening B03 via vsicurl")
+    with rasterio.open(f"/vsicurl/{b03_url}") as b03_ds:
+        b03_raw    = b03_ds.read(1).astype(np.float32)
+        tgt_crs    = b03_ds.crs
+        transform  = b03_ds.transform
+        height     = b03_ds.height
+        width      = b03_ds.width
+        profile    = b03_ds.profile.copy()
+        b03_nodata = b03_ds.nodata
+
+    logger.info("NDWI: opening B08 via vsicurl")
+    with rasterio.open(f"/vsicurl/{b08_url}") as b08_ds:
+        if b08_ds.crs == tgt_crs and b08_ds.width == width and b08_ds.height == height:
+            b08_raw    = b08_ds.read(1).astype(np.float32)
+            b08_nodata = b08_ds.nodata
+        else:
+            logger.info("NDWI: reprojecting B08 to match B03 grid")
+            b08_raw    = np.zeros((height, width), dtype=np.float32)
+            b08_nodata = b08_ds.nodata
+            reproject(
+                source=rasterio.band(b08_ds, 1),
+                destination=b08_raw,
+                src_transform=b08_ds.transform,
+                src_crs=b08_ds.crs,
+                dst_transform=transform,
+                dst_crs=tgt_crs,
+                resampling=Resampling.bilinear,
+            )
+
+    nodata_mask = np.zeros_like(b03_raw, dtype=bool)
+    if b03_nodata is not None:
+        nodata_mask |= (b03_raw == b03_nodata)
+    if b08_nodata is not None:
+        nodata_mask |= (b08_raw == b08_nodata)
+    nodata_mask |= (b03_raw <= 0) & (b08_raw <= 0)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        denom = b03_raw + b08_raw
+        ndwi  = np.where(
+            (denom > 0) & ~nodata_mask,
+            (b03_raw - b08_raw) / denom,
+            np.float32(-9999),
+        ).astype(np.float32)
+
+    valid     = ndwi[ndwi != -9999]
+    ndwi_mean = float(np.nanmean(valid)) if valid.size > 0 else 0.0
+    ndwi_mean = max(-1.0, min(1.0, ndwi_mean))
+    ndwi_p2   = float(np.percentile(valid,  2)) if valid.size > 0 else -0.5
+    ndwi_p98  = float(np.percentile(valid, 98)) if valid.size > 0 else  0.5
+    logger.info("NDWI stats: mean=%.3f p2=%.3f p98=%.3f", ndwi_mean, ndwi_p2, ndwi_p98)
+    ndwi_class = (
+        "high"     if ndwi_mean > 0.3  else
+        "moderate" if ndwi_mean > 0.1  else
+        "low"      if ndwi_mean > 0.0  else
+        "dry"
+    )
+
+    processed_at_iso = datetime.now(timezone.utc).isoformat()
+
+    base_profile = profile.copy()
+    base_profile.update({
+        "driver":     "GTiff",
+        "dtype":      "float32",
+        "count":      1,
+        "nodata":     -9999,
+        "compress":   "deflate",
+        "predictor":  3,
+        "tiled":      True,
+        "blockxsize": 512,
+        "blockysize": 512,
+        "interleave": "band",
+    })
+
+    with tempfile.NamedTemporaryFile(suffix="_ndwi_tmp.tif", delete=False) as tmp:
+        tmp_path = tmp.name
+    cog_path = tmp_path.replace("_ndwi_tmp.tif", "_ndwi_cog.tif")
+
+    try:
+        with rasterio.open(tmp_path, "w", **base_profile) as dst:
+            dst.write(ndwi, 1)
+            dst.update_tags(
+                NDWI_MEAN=f"{ndwi_mean:.4f}",
+                NDWI_CLASS=ndwi_class,
+                NDWI_P2=f"{ndwi_p2:.4f}",
+                NDWI_P98=f"{ndwi_p98:.4f}",
+                ACQ_DATE=acq_date_iso,
+                PROCESSED_AT=processed_at_iso,
+                SCENE_ID=str(scene_id),
+            )
+            dst.build_overviews([2, 4, 8, 16, 32], Resampling.average)
+            dst.update_tags(ns="rio_overview", resampling="average")
+
+        rio_copy(
+            tmp_path, cog_path,
+            driver="GTiff",
+            copy_src_overviews=True,
+            compress="deflate",
+            predictor=3,
+            tiled=True,
+            blockxsize=512,
+            blockysize=512,
+        )
+
+        key    = build_object_key(aoi_id, provider, acq_date, f"scene-{scene_id}", "ndwi.tif")
+        bucket = ensure_bucket()
+        client = get_client()
+        client.fput_object(
+            bucket, key, cog_path,
+            content_type="image/tiff",
+            metadata={
+                "x-amz-meta-acq-date":     acq_date_iso,
+                "x-amz-meta-processed-at": processed_at_iso,
+                "x-amz-meta-scene-id":     str(scene_id),
+                "x-amz-meta-ndwi-mean":    f"{ndwi_mean:.4f}",
+                "x-amz-meta-ndwi-class":   ndwi_class,
+                "x-amz-meta-ndwi-p2":      f"{ndwi_p2:.4f}",
+                "x-amz-meta-ndwi-p98":     f"{ndwi_p98:.4f}",
+            },
+        )
+        logger.info(
+            "NDWI COG uploaded -> s3://%s/%s (%.1fMB ndwi=%.3f p2=%.3f p98=%.3f)",
+            bucket, key, os.path.getsize(cog_path) / 1_048_576, ndwi_mean, ndwi_p2, ndwi_p98,
+        )
+    finally:
+        for p in (tmp_path, cog_path):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+    return key, ndwi_mean, ndwi_class, ndwi_p2, ndwi_p98
+
+
+@router.post("/run-ndwi")
+async def run_ndwi_analysis(body: dict):
+    """
+    Run Sentinel-2 NDWI analysis on an archived scene.
+    Body: { "scene_id": <int> }
+    Returns summary + TiTiler tile-URL template for immediate map display.
+    """
+    scene_id = body.get("scene_id")
+    if not scene_id:
+        raise HTTPException(422, "scene_id is required")
+
+    pool = get_pool()
+
+    async with pool.acquire() as conn:
+        scene_row = await conn.fetchrow(
+            """
+            SELECT id, name, properties, ST_AsGeoJSON(geom)::text AS geom_json
+            FROM spatial_features
+            WHERE id = $1 AND category = 'archived_scene'
+            """,
+            scene_id,
+        )
+
+    if not scene_row:
+        raise HTTPException(404, "Archived scene not found")
+
+    props = scene_row["properties"] or {}
+    if isinstance(props, str):
+        props = json.loads(props)
+
+    stac_urls = props.get("stac_asset_urls") or {}
+    aoi_id    = props.get("aoi_id")
+    cloud     = props.get("cloud_cover")
+    acq_date  = props.get("acq_date", "")
+    aoi_name  = props.get("aoi_name", "")
+    provider  = props.get("satellite_id", "sentinel-2a").lower()
+
+    minio_keys = props.get("minio_band_keys") or {}
+    if isinstance(minio_keys, str):
+        minio_keys = json.loads(minio_keys)
+
+    def _band_url(name, *aliases):
+        for n in (name, *aliases):
+            mkey = minio_keys.get(n)
+            if mkey:
+                try:
+                    return presigned_get_url_internal(mkey, expires_hours=4)
+                except Exception as exc:
+                    logger.warning("Presign failed for %s: %s", mkey, exc)
+        for n in (name, *aliases):
+            url = stac_urls.get(n)
+            if url:
+                return url
+        return None
+
+    b03_url = _band_url("B03", "green", "b03")
+    b08_url = _band_url("B08", "nir", "nir09", "b08")
+
+    if not b03_url or not b08_url:
+        raise HTTPException(
+            422,
+            "Scene is missing B03 or B08 bands in MinIO. "
+            "Archive the scene from the Imagery tab and wait for the download to complete.",
+        )
+
+    geom              = json.loads(scene_row["geom_json"]) if scene_row["geom_json"] else None
+    estimated_area_ha = _geom_area_ha(geom) if geom else 0.0
+    province_code     = (aoi_name or "N/A")[:6].upper().strip() or "N/A"
+    now               = datetime.now(timezone.utc)
+
+    import asyncio
+    loop = asyncio.get_event_loop()
+    try:
+        ndwi_tif_key, ndwi_mean, ndwi_class, ndwi_p2, ndwi_p98 = await loop.run_in_executor(
+            _EXECUTOR,
+            _compute_ndwi_cog,
+            b03_url, b08_url, aoi_id or 0, provider, acq_date, scene_id, acq_date,
+        )
+    except Exception as exc:
+        logger.exception("NDWI computation failed for scene %s", scene_id)
+        raise HTTPException(500, f"NDWI computation failed: {exc}")
+
+    ndwi_processed_at = datetime.now(timezone.utc)
+
+    # Merge NDWI stats into band_metadata alongside any existing NDVI stats
+    async with pool.acquire() as conn:
+        existing = await conn.fetchrow(
+            "SELECT id, band_metadata FROM sentinel_analysis_results WHERE scene_id = $1",
+            scene_id,
+        )
+        if existing:
+            bmeta = existing["band_metadata"] or {}
+            if isinstance(bmeta, str):
+                bmeta = json.loads(bmeta)
+            bmeta.update({
+                "ndwi_mean":  round(ndwi_mean, 4),
+                "ndwi_class": ndwi_class,
+                "ndwi_p2":    round(ndwi_p2, 4),
+                "ndwi_p98":   round(ndwi_p98, 4),
+            })
+            await conn.execute(
+                """
+                UPDATE sentinel_analysis_results
+                   SET band_metadata    = $1::jsonb,
+                       ndwi_tif_key     = $2,
+                       ndwi_processed_at = $3
+                 WHERE scene_id = $4
+                """,
+                json.dumps(bmeta), ndwi_tif_key, ndwi_processed_at, scene_id,
+            )
+            result_id = existing["id"]
+        else:
+            # No NDVI row yet — create a minimal one
+            band_meta = json.dumps({
+                "ndwi_mean":  round(ndwi_mean, 4),
+                "ndwi_class": ndwi_class,
+                "ndwi_p2":    round(ndwi_p2, 4),
+                "ndwi_p98":   round(ndwi_p98, 4),
+            })
+            result_id = await conn.fetchval(
+                """
+                INSERT INTO sentinel_analysis_results
+                    (scene_id, aoi_id, province_code, ndvi_mean,
+                     estimated_area_ha, predicted_yield_ton,
+                     cloud_cover, analyzed_at, band_metadata,
+                     ndwi_tif_key, ndwi_processed_at)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11)
+                RETURNING id
+                """,
+                scene_id, aoi_id, province_code, 0.0,
+                estimated_area_ha, 0.0,
+                cloud, now, band_meta, ndwi_tif_key, ndwi_processed_at,
+            )
+
+    logger.info("NDWI analysis done: scene=%s ndwi=%.3f class=%s key=%s",
+                scene_id, ndwi_mean, ndwi_class, ndwi_tif_key)
+
+    ndwi_cog_url  = presigned_get_url_internal(ndwi_tif_key, expires_hours=24)
+    ndwi_tile_url = _build_ndwi_tile_url(ndwi_cog_url, ndwi_p2, ndwi_p98)
+
+    return {
+        "id":               result_id,
+        "scene_id":         scene_id,
+        "aoi_id":           aoi_id,
+        "ndwi_mean":        round(ndwi_mean, 4),
+        "ndwi_class":       ndwi_class,
+        "ndwi_p2":          round(ndwi_p2, 4),
+        "ndwi_p98":         round(ndwi_p98, 4),
+        "estimated_area_ha": round(estimated_area_ha, 2),
+        "analyzed_at":      now.isoformat(),
+        "ndwi_tif_key":     ndwi_tif_key,
+        "ndwi_processed_at": ndwi_processed_at.isoformat(),
+        "ndwi_tile_url":    ndwi_tile_url,
+        "acq_date":         acq_date,
+    }
 
 
 @router.post("/run")
@@ -443,6 +752,7 @@ async def list_results(aoi_id: Optional[int] = Query(None)):
                 SELECT r.id, r.scene_id, r.aoi_id, r.province_code, r.ndvi_mean,
                        r.estimated_area_ha, r.predicted_yield_ton, r.cloud_cover,
                        r.analyzed_at, r.ndvi_tif_key, r.ndvi_processed_at,
+                       r.ndwi_tif_key, r.ndwi_processed_at AS ndwi_processed_at,
                        r.band_metadata,
                        (sf.properties->>'acq_date') AS acq_date
                   FROM sentinel_analysis_results r
@@ -458,6 +768,7 @@ async def list_results(aoi_id: Optional[int] = Query(None)):
                 SELECT r.id, r.scene_id, r.aoi_id, r.province_code, r.ndvi_mean,
                        r.estimated_area_ha, r.predicted_yield_ton, r.cloud_cover,
                        r.analyzed_at, r.ndvi_tif_key, r.ndvi_processed_at,
+                       r.ndwi_tif_key, r.ndwi_processed_at AS ndwi_processed_at,
                        r.band_metadata,
                        (sf.properties->>'acq_date') AS acq_date
                   FROM sentinel_analysis_results r
@@ -482,6 +793,16 @@ async def list_results(aoi_id: Optional[int] = Query(None)):
             except Exception:
                 pass
 
+        ndwi_tile_url = None
+        if r["ndwi_tif_key"]:
+            try:
+                ndwi_cog_url  = presigned_get_url_internal(r["ndwi_tif_key"], expires_hours=24)
+                wp2           = float(bmeta.get("ndwi_p2",  -0.5))
+                wp98          = float(bmeta.get("ndwi_p98",  0.5))
+                ndwi_tile_url = _build_ndwi_tile_url(ndwi_cog_url, wp2, wp98)
+            except Exception:
+                pass
+
         results.append({
             "id":                  r["id"],
             "scene_id":            r["scene_id"],
@@ -496,6 +817,7 @@ async def list_results(aoi_id: Optional[int] = Query(None)):
             "ndvi_processed_at":   r["ndvi_processed_at"].isoformat() if r["ndvi_processed_at"] else None,
             "acq_date":            r["acq_date"],
             "ndvi_tile_url":       ndvi_tile_url,
+            "ndwi_tile_url":       ndwi_tile_url,
         })
     return results
 
