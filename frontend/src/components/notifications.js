@@ -192,12 +192,17 @@ async function _pollTask(task) {
         const totalFromApi = data.total_bands;
         if (totalFromApi && totalFromApi > 0) task.totalBands = totalFromApi;
 
+        // Byte-level progress (preferred over band count)
+        task.bytesDownloaded = data.bytes_downloaded ?? 0;
+        task.bytesTotal      = data.bytes_total      ?? 0;
+
         task.downloaded = downloaded;
         task.status     = status === 'complete'              ? 'complete'
                         : status === 'error'                 ? 'error'
                         : status === 'downloading'           ? 'downloading'
                         : status === 'recovering'            ? 'downloading'
                         : downloaded > 0                     ? 'downloading'
+                        : (task.bytesDownloaded > 0)         ? 'downloading'
                         : 'pending';
 
         if (task.status === 'complete' || task.status === 'error') {
@@ -230,9 +235,17 @@ function _renderList() {
     }
 
     _listEl.innerHTML = _tasks.map((t) => {
-        // Never show 100% while still downloading — that would be misleading.
-        const rawPct = t.totalBands ? Math.round((t.downloaded / t.totalBands) * 100) : 0;
+        const bytesDown  = t.bytesDownloaded ?? 0;
+        const bytesTotal = t.bytesTotal      ?? 0;
+        const MB         = (b) => (b / 1_048_576).toFixed(1);
+        const hasSizes   = bytesTotal > 0;
+        // Progress percentage (capped at 99 while still downloading)
+        const rawPct = hasSizes ? Math.round((bytesDown / bytesTotal) * 100) : 0;
         const pct    = (t.status === 'downloading' && rawPct >= 100) ? 99 : rawPct;
+        const progressLabel = hasSizes
+            ? `${MB(bytesDown)} / ${MB(bytesTotal)} MB`
+            : bytesDown > 0 ? `${MB(bytesDown)} MB` : '';
+
         const cls    = `notif-item notif-item--${t.status}`;
         const icon   = t.status === 'complete'    ? '✅'
                      : t.status === 'error'       ? '❌'
@@ -240,7 +253,7 @@ function _renderList() {
                      : '🕐';
         const label  = t.status === 'complete'    ? 'Download complete'
                      : t.status === 'error'       ? 'Download failed'
-                     : t.status === 'downloading' ? `Downloading… ${pct}%`
+                     : t.status === 'downloading' ? `Downloading… ${progressLabel || `${pct}%`}`
                      : 'Queued';
         const time   = new Intl.DateTimeFormat('en', {
             month: 'short', day: 'numeric',

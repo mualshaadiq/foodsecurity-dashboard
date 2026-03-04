@@ -83,6 +83,7 @@ async def _download_bands_to_minio(
     """
     minio_band_keys: dict[str, str] = {}
     failed: list[str] = []
+    bytes_downloaded: int = 0
 
     # Mark scene as actively downloading immediately so the frontend poller
     # can show a progress indicator rather than staying on 'pending'.
@@ -94,6 +95,39 @@ async def _download_bands_to_minio(
             "WHERE id = $1",
             scene_id,
         )
+
+    # ── Parallel HEAD pass to learn total download size upfront ───────────
+    band_items = [
+        (band, url) for band, url in stac_asset_urls.items()
+        if band in DOWNLOAD_BANDS and url
+    ]
+
+    async def _head_size(url: str) -> int:
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(15.0), follow_redirects=True
+            ) as hc:
+                r = await hc.head(url)
+                return int(r.headers.get("content-length", 0))
+        except Exception:
+            return 0
+
+    import asyncio as _asyncio
+    head_sizes = await _asyncio.gather(*[_head_size(url) for _, url in band_items])
+    bytes_total: int = sum(head_sizes)
+
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE spatial_features "
+            "SET properties = properties || jsonb_build_object("
+            "    'bytes_total', $2::bigint, 'bytes_downloaded', 0"
+            ") WHERE id = $1",
+            scene_id, bytes_total,
+        )
+    logger.info(
+        "Scene %d: %d bands to download, total ~%.1f MB",
+        scene_id, len(band_items), bytes_total / 1_048_576,
+    )
 
     for band, src_url in stac_asset_urls.items():
         if band not in DOWNLOAD_BANDS or not src_url:
@@ -124,21 +158,24 @@ async def _download_bands_to_minio(
             buf.seek(0)
             upload_stream(key, buf, size, ct)
             minio_band_keys[band] = key
-            logger.info("Stored band %s → s3://%s/%s", band, settings.MINIO_BUCKET, key)
+            bytes_downloaded += size
+            logger.info("Stored band %s → s3://%s/%s (%.1f MB)", band, settings.MINIO_BUCKET, key, size / 1_048_576)
 
             # Update PostGIS after every successful band so the frontend
-            # poller reflects real progress (bands_downloaded count).
+            # poller reflects real byte-level progress.
             async with pool.acquire() as conn:
                 await conn.execute(
                     "UPDATE spatial_features "
                     "SET properties = properties "
                     "    || jsonb_build_object("
-                    "           'minio_band_keys', $2::jsonb,"
-                    "           'cog_status',      'downloading'"
+                    "           'minio_band_keys',   $2::jsonb,"
+                    "           'cog_status',        'downloading',"
+                    "           'bytes_downloaded',  $3::bigint"
                     "       ) "
                     "WHERE id = $1",
                     scene_id,
                     json.dumps(minio_band_keys),
+                    bytes_downloaded,
                 )
 
         except Exception as exc:
@@ -156,14 +193,16 @@ async def _download_bands_to_minio(
             UPDATE spatial_features
             SET properties = properties
                 || jsonb_build_object(
-                       'minio_band_keys', $2::jsonb,
-                       'cog_status',      $3
+                       'minio_band_keys',  $2::jsonb,
+                       'cog_status',       $3,
+                       'bytes_downloaded', $4::bigint
                    )
             WHERE id = $1
             """,
             scene_id,
             json.dumps(minio_band_keys),
             cog_status,
+            bytes_downloaded,
         )
     logger.info("Scene %d COG download finished — status: %s", scene_id, cog_status)
 
@@ -420,21 +459,19 @@ async def get_archived_scene(scene_id: int):
     else:
         feat["preview_url"] = props.get("thumbnail", "")
 
-    # Band download progress
+    # Byte-level download progress
     minio_keys = props.get("minio_band_keys") or {}
     if isinstance(minio_keys, str):
         minio_keys = json.loads(minio_keys)
     feat["bands_downloaded"] = len(minio_keys)
     feat["cog_status"]       = props.get("cog_status", "pending")
+    feat["bytes_downloaded"] = props.get("bytes_downloaded") or 0
+    feat["bytes_total"]      = props.get("bytes_total") or 0
 
     stac_urls = props.get("stac_asset_urls") or {}
     if isinstance(stac_urls, str):
         stac_urls = json.loads(stac_urls)
-    # Total bands = how many stac asset keys the backend will actually download.
-    # This is the authoritative number so the frontend progress bar is accurate.
-    feat["total_bands"] = sum(
-        1 for k in stac_urls if k in DOWNLOAD_BANDS
-    ) or len(DOWNLOAD_BANDS)
+    feat["total_bands"] = sum(1 for k in stac_urls if k in DOWNLOAD_BANDS) or len(DOWNLOAD_BANDS)
 
     feat["visual_url"] = minio_keys.get("visual", "") or stac_urls.get("visual", "")
     return feat
