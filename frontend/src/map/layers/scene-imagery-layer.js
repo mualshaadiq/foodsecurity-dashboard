@@ -88,6 +88,8 @@ export function showSceneImage(previewUrl, geometry, opacity = 0.85, visualUrl =
         return; // nothing to show
     }
 
+    // Insert below all vector/polygon layers — just above the basemap rasters.
+    const beforeId = _firstVectorLayer();
     _map.addLayer({
         id:     LAYER_ID,
         type:   'raster',
@@ -97,7 +99,7 @@ export function showSceneImage(previewUrl, geometry, opacity = 0.85, visualUrl =
             'raster-fade-duration': 400,
             'raster-resampling':    'linear',
         },
-    });
+    }, beforeId);
 }
 
 /**
@@ -113,6 +115,22 @@ function _removeImageLayer() {
     if (!_map) return;
     if (_map.getLayer(LAYER_ID))  _map.removeLayer(LAYER_ID);
     if (_map.getSource(SOURCE_ID)) _map.removeSource(SOURCE_ID);
+}
+
+/**
+ * Return the id of the first non-raster layer so we can insert imagery below it.
+ * Falls back to undefined (adds on top) if no vector layers exist yet.
+ */
+function _firstVectorLayer() {
+    if (!_map) return undefined;
+    const candidates = ['polygons', 'lines', 'points', 'lsd-fill', 'lbs-fill'];
+    for (const id of candidates) {
+        if (_map.getLayer(id)) return id;
+    }
+    // Generic fallback: first layer whose type is not 'raster' or 'background'
+    const layers = _map.getStyle()?.layers ?? [];
+    const first  = layers.find((l) => l.type !== 'raster' && l.type !== 'background');
+    return first?.id;
 }
 
 /**
