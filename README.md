@@ -1,15 +1,30 @@
-# GIS Web Application
+# Food Security Dashboard
 
-A production-ready full-stack GIS web application for serving and visualizing large vector datasets (~50GB shapefiles) with user authentication, spatial queries, vector tile serving, and data export capabilities.
+An interactive GIS platform for monitoring Indonesia's food security through spatial analysis of national paddy field data (LBS/LSD) and Sentinel-2 satellite imagery. Built as a full-stack containerised application serving large vector datasets (~50 GB shapefiles) alongside on-demand raster analysis.
 
-## 🏗️ Architecture
+## Architecture
 
-- **Database**: PostgreSQL 15 + PostGIS (spatial data storage & indexing)
-- **Backend API**: Python 3.11 + FastAPI (async REST API with JWT authentication)
-- **Tile Server**: Tegola (dynamic vector tile generation from PostGIS)
-- **Frontend**: MapLibre GL JS (interactive vector map visualization)
-- **Web Server**: Nginx (reverse proxy, SSL termination, static file serving)
-- **Containerization**: Docker + Docker Compose
+```
+Browser
+  └─► Nginx (HTTPS reverse proxy + static frontend)
+        ├─► FastAPI        (REST API, JWT auth, analysis pipeline)
+        ├─► Tegola         (PostGIS → MVT vector tiles)
+        └─► TiTiler        (MinIO COGs → XYZ raster tiles)
+
+FastAPI ──► PostgreSQL/PostGIS   (spatial features, AoIs, analysis results)
+FastAPI ──► MinIO                (Sentinel-2 band COGs, NDVI/NDWI GeoTIFFs)
+```
+
+### Services (docker-compose)
+
+| Service | Image | Role |
+|---|---|---|
+| `postgis` | `postgis/postgis:15-3.3` | Spatial database — stores features, AoIs, analysis results |
+| `fastapi` | custom Python 3.11 | REST API server (port 8000 internal) |
+| `minio` | `minio/minio` | S3-compatible object store for satellite band COGs |
+| `tegola` | `gospatial/tegola:v0.18.0` | Vector tile server (port 8080 internal) |
+| `titiler` | `ghcr.io/developmentseed/titiler` | COG raster tile server (port 80 internal) |
+| `nginx` | `nginx:alpine` | TLS termination, reverse proxy, serves built frontend |
 
 ## ✨ Features
 
@@ -385,19 +400,3 @@ Tegola caches frequently accessed tiles to disk:
 - SQL injection prevention via parameterized queries
 - XSS protection headers
 - Role-based access control
-
-## 📝 License
-
-[Your License Here]
-
-## 🤝 Contributing
-
-[Contributing Guidelines]
-
-## 📧 Support
-
-[Support Information]
-
----
-
-Built with ❤️ for GIS applications
