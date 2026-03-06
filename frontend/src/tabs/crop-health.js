@@ -18,6 +18,12 @@ export function initCropHealthTab(map) {
     _bindVisibilityToggle(map, 'toggle-fertilizer', 'fertilizer-zones');
     _bindNdviRunButton(map);
 
+    // Re-populate the scene selector whenever the global AoI changes.
+    window.addEventListener('aoi-changed', (e) => {
+        const id = e.detail.aoi?.id ?? null;
+        _populateSceneSelect(id);
+    });
+
     window.addEventListener('temporal-date-changed', (e) => {
         if (e.detail.mode !== 'data') return;
 

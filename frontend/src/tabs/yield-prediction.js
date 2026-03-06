@@ -1,5 +1,6 @@
 import { getYieldPredictions } from '@/api/food-security.js';
 import { sfYieldAoi } from '@/components/select-fields.js';
+import { setSelectedAoi } from '@/utils/aoi-store.js';
 
 /**
  * Yield Prediction tab — province selector + choropleth layer.
@@ -13,6 +14,8 @@ export function initYieldPredictionTab(map) {
     const statsContainer = document.getElementById('yield-stats-container');
 
     sfYieldAoi.setOnChange(async (vals) => {
+        const id = Number(vals[0]) || null;
+        setSelectedAoi(id ? { id } : null);
         if (!statsContainer) return;
         try {
             const data = await getYieldPredictions(vals[0] || '');

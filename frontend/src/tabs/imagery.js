@@ -21,6 +21,7 @@ import {
 } from '@/map/layers/cmr-footprint-layer.js';
 import { searchSentinel2, granuleToGeoJson, getBrowseUrl, bboxFromFeature } from '@/api/cmr.js';
 import { getAOIs, getAnalysisResults } from '@/api/food-security.js';
+import { setSelectedAoi } from '@/utils/aoi-store.js';
 import { archiveScene, listArchivedScenes, deleteArchivedScene } from '@/api/scene-archive.js';
 import { updateSliderWithAoiData, resetSliderToTemporal } from '@/components/time-slider.js';
 import { addDownloadTask } from '@/components/notifications.js';
@@ -129,6 +130,9 @@ export async function initImageryTab(map) {
     // Load archived scenes whenever AOI selection changes
     document.getElementById('imagery-aoi-select')?.addEventListener('change', (e) => {
         const id = Number(e.target.value) || null;
+        // Propagate to global AoI store so other tabs stay in sync.
+        const aoi = id ? (_aois.find((a) => a.id === id) ?? { id }) : null;
+        setSelectedAoi(aoi);
         hideSceneImage();   // clear stale overlay when AOI changes
         _lastScene = null;  // clear ref so old scene can't re-appear on toggle-on
         if (id) {

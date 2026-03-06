@@ -3,6 +3,7 @@ import { runNdwiAnalysis } from '@/api/food-security.js';
 import { listArchivedScenes } from '@/api/scene-archive.js';
 import { renderWeatherCard } from '@/components/weather-card.js';
 import { sfDisasterAoi } from '@/components/select-fields.js';
+import { setSelectedAoi } from '@/utils/aoi-store.js';
 import { initNdwiLayer, showNdwiLayer, hideNdwiLayer } from '@/map/layers/ndwi-layer.js';
 
 let _lastScene      = null;
@@ -49,7 +50,11 @@ export function initDisasterRiskTab(map) {
         _populateNdwiSceneSelect(e.detail?.aoi_id || null);
     });
 
-    sfDisasterAoi.setOnChange((vals) => loadWeather(vals[0] || ''));
+    sfDisasterAoi.setOnChange((vals) => {
+        const id = Number(vals[0]) || null;
+        setSelectedAoi(id ? { id } : null);
+        loadWeather(vals[0] || '');
+    });
     if (sfDisasterAoi.getValue().length) loadWeather(sfDisasterAoi.getValue()[0]);
 }
 

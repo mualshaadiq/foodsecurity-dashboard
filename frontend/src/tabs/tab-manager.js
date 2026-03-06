@@ -1,30 +1,26 @@
 /**
- * TabManager — manages active tab state, sidebar panel visibility,
- * and MapLibre layer visibility per tab.
+ * TabManager — manages active tab state and sidebar panel visibility.
+ *
+ * Layer visibility is owned entirely by the floating Layer Panel checkboxes
+ * (layer-panel.js) — tab switches no longer show/hide map layers.
  */
 
-/** Map of tab ID → array of MapLibre layer IDs to show when that tab is active.
- *  Asset-management layers are intentionally OMITTED here — their visibility
- *  is controlled exclusively by the toggle checkboxes in asset-management.js
- *  so they persist across tab changes.
- *  Analysis layers (AI, crop-health, disaster, yield) are also controlled
- *  by the floating Layer Panel (layer-panel.js). */
-const TAB_LAYERS = {
-    'asset-management':  [],  // layers managed by checkbox toggles — not reset here
-    'monitoring-setting': [],
-    'summary':           [],
-    'imagery':           [], // imagery layers handled separately by imagery.js
-    'ai':                ['farm-boundary', 'farm-boundary-outline', 'crop-classification'],
-    'crop-health':       ['ndvi-zones', 'fertilizer-zones'],
-    'disaster-risk':     ['flood-risk', 'drought-zones'],
-    'yield-prediction':  ['yield-zones', 'yield-zones-outline'],
-};
+import { getSelectedAoi } from '@/utils/aoi-store.js';
 
-/** All food-security layer IDs managed by tab visibility (hidden by default) */
-const ALL_FS_LAYERS = Object.values(TAB_LAYERS).flat();
+/** Tabs that require an AoI to be selected. */
+const ANALYSIS_TABS = new Set([
+    'imagery', 'monitoring-setting', 'ai',
+    'crop-health', 'disaster-risk', 'yield-prediction',
+]);
+
+/** All registered tab IDs (drives restoreFromHash). */
+const ALL_TABS = [
+    'asset-management', 'monitoring-setting', 'summary', 'imagery',
+    'ai', 'crop-health', 'disaster-risk', 'yield-prediction',
+];
 
 /** All tabs show the time slider (global). */
-const TEMPORAL_TABS = new Set(Object.keys(TAB_LAYERS));
+const TEMPORAL_TABS = new Set(ALL_TABS);
 
 export class TabManager {
     /**
@@ -34,6 +30,11 @@ export class TabManager {
         this.map = map;
         this.activeTab = null;
         this._bindUI();
+
+        // Re-evaluate the AoI notice whenever selection changes.
+        window.addEventListener('aoi-changed', () => {
+            if (this.activeTab) this._updateAoiNotice(this.activeTab);
+        });
     }
 
     _bindUI() {
@@ -65,8 +66,8 @@ export class TabManager {
         // Toggle summary layout
         document.querySelector('.container').classList.toggle('summary-mode', tabId === 'summary');
 
-        // Toggle map layer visibility
-        this._applyLayerVisibility(tabId);
+        // Update AoI required notice for analysis tabs
+        this._updateAoiNotice(tabId);
 
         // Notify time slider and other listeners whether this is a temporal tab
         window.dispatchEvent(new CustomEvent('temporal-tab-changed', {
@@ -77,25 +78,23 @@ export class TabManager {
         window.location.hash = tabId;
     }
 
-    _applyLayerVisibility(tabId) {
-        const visible = new Set(TAB_LAYERS[tabId] ?? []);
-
-        ALL_FS_LAYERS.forEach((layerId) => {
-            if (this.map.getLayer(layerId)) {
-                this.map.setLayoutProperty(
-                    layerId,
-                    'visibility',
-                    visible.has(layerId) ? 'visible' : 'none'
-                );
-            }
-        });
+    /**
+     * Show or hide the AoI-required notice banner in an analysis tab panel.
+     * The notice is shown whenever no AoI is selected; hidden once one is.
+     */
+    _updateAoiNotice(tabId) {
+        if (!ANALYSIS_TABS.has(tabId)) return;
+        const panel = document.getElementById(`panel-${tabId}`);
+        if (!panel) return;
+        const notice = panel.querySelector('.aoi-notice');
+        if (!notice) return;
+        notice.hidden = Boolean(getSelectedAoi());
     }
 
     /** Restore active tab from URL hash on page load */
     restoreFromHash() {
         const hash = window.location.hash.replace('#', '');
-        const validTabs = Object.keys(TAB_LAYERS);
-        const initial = validTabs.includes(hash) ? hash : 'asset-management';
+        const initial = ALL_TABS.includes(hash) ? hash : 'asset-management';
         this.activateTab(initial);
     }
 }

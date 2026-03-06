@@ -7,6 +7,7 @@
  */
 import { createSelectField } from '@/components/select-field.js';
 import { getAOIs } from '@/api/food-security.js';
+import { initAoiSync } from '@/utils/aoi-store.js';
 
 // ── AOI selector — Disaster Risk tab ─────────────────────────────────────
 export const sfDisasterAoi = createSelectField({
@@ -84,6 +85,9 @@ export async function initAoiSelectors() {
     try {
         const aois = await getAOIs();
         populateAoiSelectors(aois);
+        // Also populate native <select class="aoi-sync-select"> elements
+        // (AI Analysis and Crop Health AoI selectors).
+        initAoiSync(aois);
     } catch (err) {
         console.warn('[select-fields] Could not load AOIs for selectors:', err);
     }

@@ -308,3 +308,21 @@ select.form-control option {
 #stats-display { font-size: var(--type-small); font-weight: 300; color: var(--text-secondary); }
 #stats-display p { margin-bottom: 6px; }
 #stats-display strong { color: var(--accent); font-weight: 600; }
+
+/* ─── AoI Required Notice ────────────────────────────────────────────────── */
+/*
+ * Shown at the top of each analysis tab panel until the user selects an AoI.
+ * Toggled via JS: notice.hidden = Boolean(getSelectedAoi())
+ */
+.aoi-notice {
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    border-left: 3px solid var(--accent);
+    padding: 10px 12px;
+    margin: 8px 16px 4px;
+    font-size: var(--type-note, 12px);
+    line-height: 1.55;
+}
+.aoi-notice p { margin: 0; color: var(--text-secondary); }
+.aoi-notice p + p { margin-top: 4px; }
+.aoi-notice strong { color: var(--accent); font-weight: 600; }
+.aoi-notice em { color: var(--text-primary); font-style: normal; }

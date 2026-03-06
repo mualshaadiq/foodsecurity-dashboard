@@ -11,6 +11,7 @@
 import { getAOIs }        from '@/api/food-security.js';
 import { getLatestScene, runAnalysis } from '@/api/food-security.js';
 import { authManager }    from '@/auth/auth-manager.js';
+import { setSelectedAoi } from '@/utils/aoi-store.js';
 
 // ── Layer definitions ─────────────────────────────────────────────────────
 const MONITORING_LAYERS = [
@@ -100,6 +101,9 @@ function _bindAoiSelect() {
         const hasAoi = Boolean(sel.value);
         if (configSec)  configSec.style.display = hasAoi ? '' : 'none';
         if (statusSec)  statusSec.style.display  = hasAoi ? '' : 'none';
+        // Propagate to global AoI store.
+        const id  = Number(sel.value) || null;
+        setSelectedAoi(id ? { id } : null);
     });
 }
 

@@ -82,6 +82,9 @@
 
             <!-- ── Tab 2: Monitoring Setting ─────────────────────────── -->
             <div class="tab-panel" id="panel-monitoring-setting">
+                <div class="aoi-notice">
+                    <p>Select an <strong>Area of Interest</strong> below to configure monitoring.</p>
+                </div>
                 <div class="sidebar-section">
                     <h3>AOI Monitoring</h3>
                     <p class="imagery-hint">Configure monitoring schedules and analysis layers per AOI. Use the <strong>Layer Panel</strong> on the map to toggle overlays.</p>
@@ -176,6 +179,9 @@
 
             <!-- ── Tab 7: Imagery ────────────────────────────────────── -->
             <div class="tab-panel" id="panel-imagery">
+                <div class="aoi-notice">
+                    <p>Select an <strong>Area of Interest</strong> in <em>Scene Search</em> below to enable scene browsing and analysis.</p>
+                </div>
                 <div class="sidebar-section">
                     <h3>Sentinel-2</h3>
                     <div class="filter-group" style="margin-top:12px;">
@@ -241,6 +247,19 @@
 
             <!-- ── Tab: AI Analysis ───────────────────────────────────── -->
             <div class="tab-panel" id="panel-ai">
+                <div class="aoi-notice">
+                    <p>Select an <strong>Area of Interest</strong> to see AI analysis results for that AOI.</p>
+                    <p>Create or select one in the <strong>Asset Management</strong> tab.</p>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Area of Interest</h3>
+                    <div class="filter-group">
+                        <label class="form-label">AOI</label>
+                        <select id="ai-aoi-select" class="form-control aoi-sync-select">
+                            <option value="">— select AOI —</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="sidebar-section">
                     <h3>Farm Boundary Detection</h3>
                     <p class="imagery-hint">AI-detected farm boundaries from Sentinel-2 imagery. Run analysis from Monitoring Setting to populate.</p>
@@ -259,6 +278,9 @@
 
             <!-- ── Tab: Crop Health Monitoring ───────────────────────── -->
             <div class="tab-panel" id="panel-crop-health">
+                <div class="aoi-notice">
+                    <p>Select an <strong>Area of Interest</strong> below to load archived scenes for NDVI analysis.</p>
+                </div>
                 <div class="sidebar-section">
                     <h3>NDVI Analysis</h3>
                     <p class="imagery-hint">Run analysis on an archived scene to generate NDVI zones on the map.</p>
@@ -282,12 +304,17 @@
                 </div>
                 <div class="sidebar-section">
                     <h3>AOI Filter</h3>
-                    <div id="crop-health-aoi-mount"></div>
+                    <select id="crop-health-aoi-select" class="form-control aoi-sync-select">
+                        <option value="">— select AOI —</option>
+                    </select>
                 </div>
             </div>
 
             <!-- ── Tab: Disaster Risk ─────────────────────────────────── -->
             <div class="tab-panel" id="panel-disaster-risk">
+                <div class="aoi-notice">
+                    <p>Select an <strong>Area of Interest</strong> in <em>Weather Conditions</em> below to load risk data.</p>
+                </div>
                 <div class="sidebar-section">
                     <h3>Risk Layers</h3>
                     <div class="legend" id="legend-disaster">
@@ -325,6 +352,9 @@
 
             <!-- ── Tab: Yield Prediction ─────────────────────────────── -->
             <div class="tab-panel" id="panel-yield-prediction">
+                <div class="aoi-notice">
+                    <p>Select an <strong>Area of Interest</strong> in <em>Province Stats</em> below to load yield predictions.</p>
+                </div>
                 <div class="sidebar-section">
                     <h3>Yield Forecast</h3>
                     <p class="imagery-hint">Yield estimates computed from NDVI analysis results. Run analysis in Crop Health to populate.</p>
